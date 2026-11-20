@@ -12,6 +12,11 @@
     <InformationalVersion>1.1.0</InformationalVersion>
     <Product>MemoBam</Product>
     <Description>Archivio fisico dei lavori eseguiti e diario giornaliero</Description>
+    <ApplicationIcon>Assets\memobam.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\memobam.ico" />
+  </ItemGroup>
 
 </Project>
