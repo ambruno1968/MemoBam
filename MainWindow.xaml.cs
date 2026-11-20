@@ -1479,6 +1479,41 @@ public partial class MainWindow : Window
 
     #endregion
 
+    private void PwaQrButton_Click(object sender, RoutedEventArgs e)
+    {
+        QrOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void CloseQrOverlay_Click(object sender, RoutedEventArgs e)
+    {
+        QrOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void QrOverlayBackdrop_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        QrOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void QrOverlayCard_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void OpenPwaUrl_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://ambruno1968.github.io/MemoBamPWA/")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Impossibile aprire il link: {ex.Message}");
+        }
+    }
+
     private sealed class DraftAttachmentItem
     {
         public string FullPath { get; init; } = string.Empty;

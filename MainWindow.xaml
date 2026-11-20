@@ -313,6 +313,40 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="PwaQrButton"
+                                    Click="PwaQrButton_Click"
+                                    Cursor="Hand"
+                                    Background="#1E293B"
+                                    BorderBrush="#334155"
+                                    BorderThickness="1"
+                                    Padding="7,2"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Credit &amp; QR Code PWA (clicca per ingrandire)">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="8"
+                                                Padding="{TemplateBinding Padding}">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border Background="White" CornerRadius="3" Padding="1.5" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <Image Source="Assets/qrcode-memobam-pwa.png"
+                                                           Width="16"
+                                                           Height="16"
+                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                                </Border>
+                                                <TextBlock Text="by Bruno Astemio  •  📱 PWA"
+                                                           Foreground="#CBD5E1"
+                                                           FontSize="10.5"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
                             <Border Background="#2563EB" CornerRadius="11" Padding="9,3" Margin="0,0,8,0" VerticalAlignment="Center">
                                 <TextBlock x:Name="TotalCountBadge"
                                            Text="0 schede"
@@ -1500,6 +1534,75 @@
                     </Grid>
                 </Grid>
             </Grid>
+        </Grid>
+
+        <!-- Enlarged PWA QR Code & Credit Overlay -->
+        <Grid x:Name="QrOverlay"
+              Background="#B30F172A"
+              Visibility="Collapsed"
+              MouseLeftButtonDown="QrOverlayBackdrop_MouseDown">
+            <Border Background="{DynamicResource SurfaceBgBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="380"
+                    MouseLeftButtonDown="QrOverlayCard_MouseDown">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="MemoBam PWA — Sola Lettura"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,4"/>
+                    <TextBlock Text="Scansiona per aprire su Smartphone o ChromeOS"
+                               FontSize="12"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,14"/>
+
+                    <Border Background="White"
+                            CornerRadius="12"
+                            Padding="12"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="1"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,14">
+                        <Image Source="Assets/qrcode-memobam-pwa.png"
+                               Width="256"
+                               Height="256"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                    </Border>
+
+                    <Button Content="https://ambruno1968.github.io/MemoBamPWA/"
+                            Click="OpenPwaUrl_Click"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#2563EB"
+                            FontSize="11.5"
+                            FontWeight="SemiBold"
+                            Cursor="Hand"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,10"
+                            ToolTip="Apri nel browser"/>
+
+                    <TextBlock Text="Creato da Bruno Astemio  •  MemoBam"
+                               FontSize="11.5"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,14"/>
+
+                    <Button Content="Chiudi"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Background="#2563EB"
+                            Foreground="White"
+                            Padding="22,7"
+                            HorizontalAlignment="Center"
+                            Click="CloseQrOverlay_Click"/>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Window>

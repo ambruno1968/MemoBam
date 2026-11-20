@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\memobam.ico" />
+    <Resource Include="Assets\qrcode-memobam-pwa.png" />
   </ItemGroup>
 
 </Project>
