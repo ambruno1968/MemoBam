@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.3.0] - 2026-11-20
+
+### Aggiunto
+- **Allegati del Diario visibili nell'Archivio Documenti**: gli allegati collegati alle righe del Diario compaiono ora anche in **Archivio Documenti** (e nella ricerca) con il badge **`📓 Diario`** e il riferimento alla riga di appartenenza.
+- **Aggancio allegati alla nota in stesura**: trascinando file nella zona Drag & Drop mentre stai scrivendo una nuova nota del Diario, gli allegati vengono agganciati alla bozza corrente senza creare righe extra e salvati insieme alla nota al clic su **`💾 Salva`**.
+
 ## [1.2.0] - 2026-11-20
 
 ### Aggiunto

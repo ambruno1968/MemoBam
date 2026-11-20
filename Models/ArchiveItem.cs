@@ -59,4 +59,19 @@ public class ArchiveItem
 
     [JsonIgnore]
     public bool HasNotes => !string.IsNullOrWhiteSpace(Notes);
+
+    [JsonIgnore]
+    public bool IsDiaryAttachment { get; set; }
+
+    [JsonIgnore]
+    public string DiarySourceLabel { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public string? DirectFullPath { get; set; }
+
+    [JsonIgnore]
+    public DiaryEntry? LinkedDiaryEntry { get; set; }
+
+    [JsonIgnore]
+    public DiaryAttachment? LinkedDiaryAttachment { get; set; }
 }

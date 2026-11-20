@@ -189,6 +189,48 @@ public class DiaryService
     public int GetTodayCount() =>
         _entries.Count(e => e.Timestamp.Date == DateTime.Today);
 
+    public List<(DiaryEntry Entry, DiaryAttachment Attachment)> GetMatchingAttachments(string? query, DateTime? dateFilter)
+    {
+        var matches = new List<(DiaryEntry Entry, DiaryAttachment Attachment)>();
+        var terms = string.IsNullOrWhiteSpace(query)
+            ? []
+            : query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var entry in _entries)
+        {
+            if (entry.Attachments.Count == 0) continue;
+
+            foreach (var att in entry.Attachments)
+            {
+                if (dateFilter.HasValue && att.AddedAt.Date != dateFilter.Value.Date && entry.Timestamp.Date != dateFilter.Value.Date)
+                {
+                    continue;
+                }
+
+                bool termMatch = true;
+                foreach (var term in terms)
+                {
+                    if (!att.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        && !entry.Text.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        && !att.AddedAt.ToString("dd/MM/yyyy").Contains(term, StringComparison.OrdinalIgnoreCase)
+                        && !att.AddedAt.ToString("yyyy-MM-dd").Contains(term, StringComparison.OrdinalIgnoreCase)
+                        && !att.AddedAt.ToString("HH:mm:ss").Contains(term, StringComparison.OrdinalIgnoreCase))
+                    {
+                        termMatch = false;
+                        break;
+                    }
+                }
+
+                if (termMatch)
+                {
+                    matches.Add((entry, att));
+                }
+            }
+        }
+
+        return matches;
+    }
+
     public List<DiaryEntry> GetEntries(DateTime? dateFilter, string? query = null)
     {
         IEnumerable<DiaryEntry> results = _entries;

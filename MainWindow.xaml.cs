@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private DiaryService _diaryService;
     private readonly DispatcherTimer _autoHideTimer;
     private readonly DispatcherTimer _hoverExpandTimer;
+    private readonly List<DraftAttachmentItem> _pendingDraftAttachments = [];
     private bool _isCollapsed;
     private bool _isMiniDropMode;
     private bool _isDialogOpen;
@@ -598,10 +599,38 @@ public partial class MainWindow : Window
 
     private void RefreshCardsList()
     {
-        var allItems = _archiveService.GetAllItems();
-        TotalCountBadge.Text = allItems.Count == 1 ? "1 scheda" : $"{allItems.Count} schede";
+        var archiveAll = _archiveService.GetAllItems();
+        var diaryAll = _diaryService.GetMatchingAttachments(null, null);
+        int totalCount = archiveAll.Count + diaryAll.Count;
+        TotalCountBadge.Text = totalCount == 1 ? "1 scheda" : $"{totalCount} schede";
 
         var filtered = _archiveService.Search(SearchTextBox.Text, FilterDatePicker.SelectedDate);
+
+        foreach (var (entry, att) in _diaryService.GetMatchingAttachments(SearchTextBox.Text, FilterDatePicker.SelectedDate))
+        {
+            string fullPath = _diaryService.GetAttachmentFullPath(att);
+            long sizeBytes = !att.IsDirectory && File.Exists(fullPath) ? new FileInfo(fullPath).Length : 0;
+            string preview = entry.Text.Replace("\r\n", " ").Replace("\n", " ").Trim();
+            if (preview.Length > 80) preview = preview[..80] + "…";
+
+            filtered.Add(new ArchiveItem
+            {
+                Id = att.Id,
+                Title = att.IsDirectory ? att.FileName : Path.GetFileNameWithoutExtension(att.FileName),
+                OriginalFileName = att.FileName,
+                ArchivedAt = att.AddedAt,
+                FileSizeBytes = sizeBytes,
+                IsDirectory = att.IsDirectory,
+                IsDone = entry.IsDone,
+                IsDiaryAttachment = true,
+                DiarySourceLabel = $"Riga diario ({entry.DateFormatted} {entry.TimeFormatted}): {preview}",
+                DirectFullPath = fullPath,
+                LinkedDiaryEntry = entry,
+                LinkedDiaryAttachment = att
+            });
+        }
+
+        filtered = filtered.OrderByDescending(i => i.ArchivedAt).ToList();
         CardsListBox.ItemsSource = filtered;
 
         ResultsSummaryTextBlock.Text = filtered.Count == 1 ? "1 scheda trovata" : $"{filtered.Count} schede trovate";
@@ -619,19 +648,36 @@ public partial class MainWindow : Window
 
             if (DiaryTabRadio.IsChecked == true)
             {
-                var targetEntry = DiaryListBox.SelectedItem as DiaryEntry
-                    ?? (DiaryListBox.Items.Count > 0 ? DiaryListBox.Items[0] as DiaryEntry : null);
-
-                if (targetEntry is null)
+                bool isEditingDraft = !DiaryRichTextHelper.IsDocumentEmpty(DiaryRichTextBox.Document);
+                if (!isEditingDraft && DiaryListBox.SelectedItem is DiaryEntry selectedEntry)
                 {
-                    string fallbackText = !string.IsNullOrWhiteSpace(CustomTitleTextBox.Text)
-                        ? CustomTitleTextBox.Text.Trim()
-                        : $"Allegati ({string.Join(", ", paths.Select(Path.GetFileName))})";
-                    targetEntry = _diaryService.AddEntry(fallbackText, DiaryDatePicker.SelectedDate ?? DateTime.Today);
-                    CustomTitleTextBox.Clear();
+                    AttachFilesToDiaryEntry(selectedEntry, paths, moveFiles);
+                    return;
                 }
 
-                AttachFilesToDiaryEntry(targetEntry, paths, moveFiles);
+                int addedDraftCount = 0;
+                foreach (var path in paths.Where(p => File.Exists(p) || Directory.Exists(p)))
+                {
+                    if (_pendingDraftAttachments.Any(d => string.Equals(d.FullPath, path, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    _pendingDraftAttachments.Add(new DraftAttachmentItem
+                    {
+                        FullPath = path,
+                        MoveFile = moveFiles
+                    });
+                    addedDraftCount++;
+                }
+
+                RefreshPendingDraftAttachmentsUI();
+                if (addedDraftCount > 0)
+                {
+                    ShowStatus(
+                        addedDraftCount == 1
+                            ? $"Allegato pronto per la nota: \"{Path.GetFileName(paths[0])}\" (clicca 💾 Salva)"
+                            : $"{addedDraftCount} allegati pronti per la nota (clicca 💾 Salva)",
+                        isError: false);
+                }
                 return;
             }
 
@@ -828,9 +874,14 @@ public partial class MainWindow : Window
         }
     }
 
+    private string GetItemFullPath(ArchiveItem item) =>
+        !string.IsNullOrWhiteSpace(item.DirectFullPath)
+            ? item.DirectFullPath
+            : _archiveService.GetFullPath(item);
+
     private void OpenItem(ArchiveItem item)
     {
-        var fullPath = _archiveService.GetFullPath(item);
+        var fullPath = GetItemFullPath(item);
         if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
         {
             MessageBox.Show($"Il file non è più presente nel percorso:\n{fullPath}", "File non trovato", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -848,7 +899,7 @@ public partial class MainWindow : Window
     {
         if (sender is not Button { Tag: ArchiveItem item }) return;
 
-        var fullPath = _archiveService.GetFullPath(item);
+        var fullPath = GetItemFullPath(item);
         if (File.Exists(fullPath) || Directory.Exists(fullPath))
         {
             Process.Start("explorer.exe", $"/select,\"{fullPath}\"");
@@ -862,6 +913,12 @@ public partial class MainWindow : Window
     private void EditItemButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ArchiveItem item }) return;
+
+        if (item.IsDiaryAttachment && item.LinkedDiaryEntry is { } diaryEntry)
+        {
+            OpenDiaryEntryDetail(diaryEntry);
+            return;
+        }
 
         var dialog = new EditItemWindow(item.Title, item.Notes)
         {
@@ -892,6 +949,24 @@ public partial class MainWindow : Window
         _isDialogOpen = true;
         try
         {
+            if (item.IsDiaryAttachment && item.LinkedDiaryEntry is { } entry && item.LinkedDiaryAttachment is { } att)
+            {
+                var attResult = MessageBox.Show(
+                    $"Vuoi eliminare l'allegato \"{att.FileName}\" dalla riga del diario?\n\nVerrà rimosso sia dal diario che dall'archivio.",
+                    "Conferma eliminazione allegato",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (attResult == MessageBoxResult.Yes)
+                {
+                    _diaryService.RemoveAttachment(entry, att);
+                    RefreshDiaryList();
+                    RefreshCardsList();
+                    ShowStatus($"Allegato \"{att.FileName}\" eliminato.", isError: false);
+                }
+                return;
+            }
+
             var result = MessageBox.Show(
                 $"Vuoi eliminare la scheda \"{item.Title}\"?\n\nScegli 'Sì' per eliminare sia la scheda che il file fisico archiviato.\nScegli 'No' per annullare.",
                 "Conferma eliminazione",
@@ -980,6 +1055,7 @@ public partial class MainWindow : Window
                 entry.IsDone = dialog.EditedIsDone;
                 _diaryService.UpdateEntry(entry);
                 RefreshDiaryList();
+                RefreshCardsList();
             }
         }
         finally
@@ -993,15 +1069,50 @@ public partial class MainWindow : Window
         DiaryRichTextHelper.InsertSecondaryCheckBox(DiaryRichTextBox);
     }
 
+    private void RefreshPendingDraftAttachmentsUI()
+    {
+        PendingDraftAttachmentsControl.ItemsSource = null;
+        PendingDraftAttachmentsControl.ItemsSource = _pendingDraftAttachments;
+        PendingDraftAttachmentsPanel.Visibility = _pendingDraftAttachments.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void RemoveDraftAttachmentButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: DraftAttachmentItem item })
+        {
+            _pendingDraftAttachments.Remove(item);
+            RefreshPendingDraftAttachmentsUI();
+        }
+    }
+
     private void RecordDiaryInput()
     {
         string text = DiaryRichTextHelper.ExtractPlainText(DiaryRichTextBox.Document);
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text) && _pendingDraftAttachments.Count == 0) return;
+
+        if (string.IsNullOrWhiteSpace(text) && _pendingDraftAttachments.Count > 0)
+        {
+            text = $"Allegati ({string.Join(", ", _pendingDraftAttachments.Select(a => Path.GetFileName(a.FullPath)))})";
+        }
 
         string richXaml = DiaryRichTextHelper.SerializeDocument(DiaryRichTextBox.Document);
         var entry = _diaryService.AddEntry(text, DiaryDatePicker.SelectedDate ?? DateTime.Today, richXaml);
+
+        if (_pendingDraftAttachments.Count > 0)
+        {
+            foreach (var group in _pendingDraftAttachments.GroupBy(a => a.MoveFile))
+            {
+                _diaryService.AddAttachments(entry, group.Select(g => g.FullPath), group.Key);
+            }
+            _pendingDraftAttachments.Clear();
+            RefreshPendingDraftAttachmentsUI();
+        }
+
         DiaryRichTextHelper.ClearDocument(DiaryRichTextBox);
         RefreshDiaryList();
+        RefreshCardsList();
         ShowStatus($"Diario registrato ({entry.DateFormatted} {entry.TimeFormatted})", isError: false);
     }
 
@@ -1083,6 +1194,7 @@ public partial class MainWindow : Window
         }
 
         RefreshDiaryList();
+        RefreshCardsList();
         ShowStatus(
             added.Count == 1
                 ? $"Allegato \"{added[0].FileName}\" collegato alla riga del diario."
@@ -1294,7 +1406,15 @@ public partial class MainWindow : Window
         if (sender is not CheckBox { Tag: ArchiveItem item } cb) return;
 
         bool isDone = cb.IsChecked == true;
-        _archiveService.SetDone(item, isDone);
+        if (item.IsDiaryAttachment && item.LinkedDiaryEntry is { } entry)
+        {
+            _diaryService.SetDone(entry, isDone);
+            RefreshDiaryList();
+        }
+        else
+        {
+            _archiveService.SetDone(item, isDone);
+        }
         RefreshCardsList();
     }
 
@@ -1305,6 +1425,7 @@ public partial class MainWindow : Window
         bool isDone = cb.IsChecked == true;
         _diaryService.SetDone(entry, isDone);
         RefreshDiaryList();
+        RefreshCardsList();
     }
 
     private void OpenPendingAlertItem_Click(object sender, RoutedEventArgs e)
@@ -1347,4 +1468,13 @@ public partial class MainWindow : Window
     }
 
     #endregion
+
+    private sealed class DraftAttachmentItem
+    {
+        public string FullPath { get; init; } = string.Empty;
+        public bool MoveFile { get; init; }
+        public string DisplayName => Directory.Exists(FullPath)
+            ? $"📁 {Path.GetFileName(FullPath)}"
+            : $"📎 {Path.GetFileName(FullPath)}";
+    }
 }
