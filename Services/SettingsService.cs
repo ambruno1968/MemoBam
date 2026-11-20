@@ -6,6 +6,7 @@ namespace MemoBam.Services;
 public class AppSettings
 {
     public string ArchiveRootPath { get; set; } = ArchiveService.FixedArchivePath;
+    public bool IsDarkTheme { get; set; }
 }
 
 /// <summary>

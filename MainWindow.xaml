@@ -12,7 +12,7 @@
         AllowDrop="True"
         PreviewDragEnter="Window_PreviewDragEnter"
         WindowStartupLocation="CenterScreen"
-        Background="#F1F5F9"
+        Background="{DynamicResource AppBgBrush}"
         BorderBrush="#0F172A"
         BorderThickness="1">
 
@@ -26,6 +26,17 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Theme Brushes (Light default, dynamically switched for Dark theme) -->
+        <SolidColorBrush x:Key="AppBgBrush" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="SurfaceBgBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceBorderBrush" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="InputBgBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DropZoneBgBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#475569"/>
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#64748B"/>
+        <SolidColorBrush x:Key="PillBgBrush" Color="#F1F5F9"/>
 
         <Style x:Key="ActionButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="9,5"/>
@@ -431,6 +442,37 @@
                             </Button.Template>
                             <Button.Content>📁 Cartella</Button.Content>
                         </Button>
+
+                        <ToggleButton x:Name="ThemeToggleButton"
+                                      Checked="ThemeToggleButton_Changed"
+                                      Unchecked="ThemeToggleButton_Changed"
+                                      Cursor="Hand"
+                                      ToolTip="Passa tra tema chiaro e tema scuro"
+                                      Margin="5,2,0,2">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="ThemeBorder"
+                                            Background="#1E293B"
+                                            BorderBrush="#334155"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="8,5">
+                                        <TextBlock x:Name="ThemeText"
+                                                   Text="🌙 Scuro"
+                                                   FontSize="11"
+                                                   Foreground="#CBD5E1"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="ThemeBorder" Property="Background" Value="#334155"/>
+                                            <Setter TargetName="ThemeBorder" Property="BorderBrush" Value="#64748B"/>
+                                            <Setter TargetName="ThemeText" Property="Text" Value="☀️ Chiaro"/>
+                                            <Setter TargetName="ThemeText" Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
                     </WrapPanel>
                 </Grid>
             </Border>
@@ -555,9 +597,9 @@
                 <Border x:Name="DropPanelBorder"
                         Grid.Column="0"
                         Grid.Row="0"
-                        Background="White"
+                        Background="{DynamicResource SurfaceBgBrush}"
                         CornerRadius="10"
-                        BorderBrush="#CBD5E1"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
                         BorderThickness="1"
                         Padding="12">
                     <Grid>
@@ -572,19 +614,21 @@
                         <TextBlock Text="Archivia documento"
                                    FontSize="14.5"
                                    FontWeight="Bold"
-                                   Foreground="#0F172A"
+                                   Foreground="{DynamicResource PrimaryTextBrush}"
                                    Margin="0,0,0,8"/>
 
                         <StackPanel x:Name="OptionalMetadataPanel" Grid.Row="1" Margin="0,0,0,8">
                             <TextBlock Text="Titolo personalizzato (opzionale)"
                                        FontSize="11.5"
                                        FontWeight="SemiBold"
-                                       Foreground="#475569"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Margin="0,0,0,3"/>
                             <TextBox x:Name="CustomTitleTextBox"
                                      Padding="8,5"
                                      FontSize="12.5"
-                                     BorderBrush="#CBD5E1"
+                                     Background="{DynamicResource InputBgBrush}"
+                                     Foreground="{DynamicResource PrimaryTextBrush}"
+                                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                      BorderThickness="1"
                                      Margin="0,0,0,6"
                                      ToolTip="Se lasciato vuoto, usa il nome del file"/>
@@ -592,7 +636,7 @@
                             <TextBlock Text="Note lavoro (opzionale)"
                                        FontSize="11.5"
                                        FontWeight="SemiBold"
-                                       Foreground="#475569"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Margin="0,0,0,3"/>
                             <TextBox x:Name="CustomNotesTextBox"
                                      Padding="8,5"
@@ -601,7 +645,9 @@
                                      TextWrapping="Wrap"
                                      AcceptsReturn="True"
                                      VerticalScrollBarVisibility="Auto"
-                                     BorderBrush="#CBD5E1"
+                                     Background="{DynamicResource InputBgBrush}"
+                                     Foreground="{DynamicResource PrimaryTextBrush}"
+                                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                      BorderThickness="1"/>
                         </StackPanel>
 
@@ -613,7 +659,7 @@
                                 DragOver="DropZone_DragOver"
                                 DragLeave="DropZone_DragLeave"
                                 Drop="DropZone_Drop"
-                                Background="#F8FAFC"
+                                Background="{DynamicResource DropZoneBgBrush}"
                                 BorderBrush="#94A3B8"
                                 BorderThickness="2"
                                 CornerRadius="10"
@@ -636,7 +682,7 @@
                                                Text="Trascina qui i documenti"
                                                FontSize="13.5"
                                                FontWeight="SemiBold"
-                                               Foreground="#1E293B"
+                                               Foreground="{DynamicResource PrimaryTextBrush}"
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center"/>
                                     <TextBlock Text="da Scrivania o Esplora File"
@@ -664,7 +710,7 @@
                             <CheckBox x:Name="MoveFilesCheckBox"
                                       Content="Sposta invece di copiare (rimuove dal Desktop)"
                                       FontSize="11.5"
-                                      Foreground="#334155"
+                                      Foreground="{DynamicResource SecondaryTextBrush}"
                                       VerticalContentAlignment="Center"/>
                             <Grid Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
@@ -745,9 +791,9 @@
 
                         <!-- Search Bar -->
                         <Border Grid.Row="0"
-                                Background="White"
+                                Background="{DynamicResource SurfaceBgBrush}"
                                 CornerRadius="10"
-                                BorderBrush="#CBD5E1"
+                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
                                 Padding="9">
                             <Grid>
@@ -763,7 +809,9 @@
                                     <TextBox x:Name="SearchTextBox"
                                              Padding="9,6"
                                              FontSize="12.5"
-                                             BorderBrush="#CBD5E1"
+                                             Background="{DynamicResource InputBgBrush}"
+                                             Foreground="{DynamicResource PrimaryTextBrush}"
+                                             BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                              BorderThickness="1"
                                              VerticalContentAlignment="Center"
                                              TextChanged="SearchTextBox_TextChanged"/>
@@ -845,12 +893,12 @@
                                             Padding="12,10">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="White"/>
-                                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsDone}" Value="False">
-                                                        <Setter Property="Background" Value="#FFFBEB"/>
                                                         <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -896,7 +944,7 @@
                                                 <TextBlock Text="{Binding Title}"
                                                            FontSize="14"
                                                            FontWeight="Bold"
-                                                           Foreground="#0F172A"
+                                                           Foreground="{DynamicResource PrimaryTextBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
 
                                                 <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -911,7 +959,7 @@
 
                                                     <TextBlock Text="{Binding OriginalFileName}"
                                                                FontSize="11.5"
-                                                               Foreground="#475569"
+                                                               Foreground="{DynamicResource SecondaryTextBrush}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
                                                                MaxWidth="180"/>
@@ -923,14 +971,14 @@
 
                                                     <TextBlock Text="{Binding FileSizeFormatted}"
                                                                FontSize="11.5"
-                                                               Foreground="#475569"
+                                                               Foreground="{DynamicResource SecondaryTextBrush}"
                                                                VerticalAlignment="Center"/>
                                                 </WrapPanel>
 
                                                 <TextBlock Text="{Binding Notes}"
                                                            Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}"
                                                            FontSize="12"
-                                                           Foreground="#334155"
+                                                           Foreground="{DynamicResource SecondaryTextBrush}"
                                                            TextWrapping="Wrap"
                                                            Margin="0,4,0,0"/>
                                             </StackPanel>
@@ -989,9 +1037,9 @@
 
                         <!-- Diary Controls: Date + Search + Folder -->
                         <Border Grid.Row="0"
-                                Background="White"
+                                Background="{DynamicResource SurfaceBgBrush}"
                                 CornerRadius="10"
-                                BorderBrush="#CBD5E1"
+                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
                                 Padding="9"
                                 Margin="0,0,0,8">
@@ -1048,64 +1096,113 @@
                             </WrapPanel>
                         </Border>
 
-                        <!-- Quick Record Input -->
+                        <!-- Quick Record Input with Formatting Toolbar -->
                         <Border Grid.Row="1"
-                                Background="White"
+                                Background="{DynamicResource SurfaceBgBrush}"
                                 CornerRadius="10"
                                 BorderBrush="#93C5FD"
                                 BorderThickness="1.5"
                                 Padding="10"
                                 Margin="0,0,0,8">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
 
-                                <Grid Grid.Column="0">
-                                    <TextBox x:Name="DiaryInputTextBox"
-                                             Padding="10,7"
-                                             FontSize="13"
-                                             MinHeight="68"
-                                             MaxHeight="130"
-                                             BorderBrush="#CBD5E1"
-                                             BorderThickness="1"
-                                             TextWrapping="Wrap"
-                                             AcceptsReturn="True"
-                                             VerticalScrollBarVisibility="Auto"
-                                             VerticalContentAlignment="Top"/>
-                                    <TextBlock Text="Scrivi le note dell'attività (puoi usare Invio per andare a capo), poi clicca Salva..."
-                                               Foreground="#94A3B8"
-                                               FontSize="12.5"
-                                               Margin="12,8,8,0"
-                                               VerticalAlignment="Top"
-                                               TextWrapping="Wrap"
-                                               IsHitTestVisible="False">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Text, ElementName=DiaryInputTextBox}" Value="">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
+                                <!-- Formatting Toolbar -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Content="B"
+                                            Command="EditingCommands.ToggleBold"
+                                            CommandTarget="{Binding ElementName=DiaryRichTextBox}"
+                                            FontWeight="Bold"
+                                            Width="28"
+                                            Height="25"
+                                            Margin="0,0,4,0"
+                                            Background="#F1F5F9"
+                                            Foreground="#0F172A"
+                                            BorderBrush="#CBD5E1"
+                                            BorderThickness="1"
+                                            Cursor="Hand"
+                                            ToolTip="Grassetto (Ctrl+B)"/>
+                                    <Button Content="I"
+                                            Command="EditingCommands.ToggleItalic"
+                                            CommandTarget="{Binding ElementName=DiaryRichTextBox}"
+                                            FontStyle="Italic"
+                                            FontFamily="Georgia"
+                                            Width="28"
+                                            Height="25"
+                                            Margin="0,0,4,0"
+                                            Background="#F1F5F9"
+                                            Foreground="#0F172A"
+                                            BorderBrush="#CBD5E1"
+                                            BorderThickness="1"
+                                            Cursor="Hand"
+                                            ToolTip="Corsivo (Ctrl+I)"/>
+                                    <Button Content="• Elenco"
+                                            Command="EditingCommands.ToggleBullets"
+                                            CommandTarget="{Binding ElementName=DiaryRichTextBox}"
+                                            Padding="8,0"
+                                            Height="25"
+                                            Margin="0,0,4,0"
+                                            FontSize="11.5"
+                                            Background="#F1F5F9"
+                                            Foreground="#0F172A"
+                                            BorderBrush="#CBD5E1"
+                                            BorderThickness="1"
+                                            Cursor="Hand"
+                                            ToolTip="Elenco puntato"/>
+                                    <Button Content="☑ Spunta"
+                                            Click="InsertDiaryCheckBoxButton_Click"
+                                            Padding="8,0"
+                                            Height="25"
+                                            FontSize="11.5"
+                                            Background="#F1F5F9"
+                                            Foreground="#0F172A"
+                                            BorderBrush="#CBD5E1"
+                                            BorderThickness="1"
+                                            Cursor="Hand"
+                                            ToolTip="Inserisci una casella di spunta secondaria"/>
+                                </StackPanel>
+
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <RichTextBox x:Name="DiaryRichTextBox"
+                                                 Grid.Column="0"
+                                                 Padding="8,6"
+                                                 FontSize="13"
+                                                 MinHeight="72"
+                                                 MaxHeight="140"
+                                                 Background="{DynamicResource InputBgBrush}"
+                                                 Foreground="{DynamicResource PrimaryTextBrush}"
+                                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                                 BorderThickness="1"
+                                                 AcceptsReturn="True"
+                                                 VerticalScrollBarVisibility="Auto">
+                                        <RichTextBox.Resources>
+                                            <Style TargetType="{x:Type Paragraph}">
+                                                <Setter Property="Margin" Value="0,0,0,3"/>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
+                                        </RichTextBox.Resources>
+                                    </RichTextBox>
 
-                                <Button Grid.Column="2"
-                                        Content="💾 Salva"
-                                        Click="AddDiaryEntryButton_Click"
-                                        Padding="14,7"
-                                        VerticalAlignment="Top"
-                                        Background="#2563EB"
-                                        Foreground="White"
-                                        FontWeight="Bold"
-                                        FontSize="12.5"
-                                        BorderThickness="0"
-                                        Cursor="Hand"/>
+                                    <Button Grid.Column="2"
+                                            Content="💾 Salva"
+                                            Click="AddDiaryEntryButton_Click"
+                                            Padding="14,7"
+                                            VerticalAlignment="Top"
+                                            Background="#2563EB"
+                                            Foreground="White"
+                                            FontWeight="Bold"
+                                            FontSize="12.5"
+                                            BorderThickness="0"
+                                            Cursor="Hand"/>
+                                </Grid>
                             </Grid>
                         </Border>
 
@@ -1198,7 +1295,7 @@
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Text}"
                                                            FontSize="13"
-                                                           Foreground="#0F172A"
+                                                           Foreground="{DynamicResource PrimaryTextBrush}"
                                                            TextWrapping="Wrap"/>
 
                                                 <ItemsControl ItemsSource="{Binding Attachments}"

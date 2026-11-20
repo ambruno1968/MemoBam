@@ -10,6 +10,7 @@ public class DiaryEntry
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public DateTime Timestamp { get; set; } = DateTime.Now;
     public string Text { get; set; } = string.Empty;
+    public string? RichContentXaml { get; set; }
     public bool IsDone { get; set; } = true;
     public List<DiaryAttachment> Attachments { get; set; } = [];
 

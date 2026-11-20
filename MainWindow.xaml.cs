@@ -48,7 +48,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         var settings = SettingsService.Load();
         _archiveService = new ArchiveService(settings.ArchiveRootPath);
-        _diaryService = new DiaryService(_archiveService.BaseDirectory);
+        _diaryService = new DiaryService(_archiveService.BaseDirectory)
+        {
+            IsDarkTheme = settings.IsDarkTheme
+        };
 
         var infoVer = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
@@ -59,6 +62,9 @@ public partial class MainWindow : Window
         FixedPathTextBlock.Text = $"Percorso: {_archiveService.BaseDirectory}";
         FixedPathTextBlock.ToolTip = _archiveService.BaseDirectory;
         DiaryDatePicker.SelectedDate = DateTime.Today;
+        DiaryRichTextHelper.ClearDocument(DiaryRichTextBox);
+        ThemeToggleButton.IsChecked = settings.IsDarkTheme;
+        ApplyTheme(settings.IsDarkTheme);
 
         _autoHideTimer = new DispatcherTimer
         {
@@ -772,10 +778,15 @@ public partial class MainWindow : Window
             if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.FolderName))
             {
                 string newPath = dialog.FolderName;
-                SettingsService.Save(new AppSettings { ArchiveRootPath = newPath });
+                bool isDark = ThemeToggleButton.IsChecked == true;
+                SettingsService.Save(new AppSettings
+                {
+                    ArchiveRootPath = newPath,
+                    IsDarkTheme = isDark
+                });
 
                 _archiveService = new ArchiveService(newPath);
-                _diaryService = new DiaryService(newPath);
+                _diaryService = new DiaryService(newPath) { IsDarkTheme = isDark };
 
                 FixedPathTextBlock.Text = $"Percorso: {_archiveService.BaseDirectory}";
                 FixedPathTextBlock.ToolTip = _archiveService.BaseDirectory;
@@ -965,6 +976,7 @@ public partial class MainWindow : Window
             if (dialog.ShowDialog() == true)
             {
                 entry.Text = dialog.EditedText;
+                entry.RichContentXaml = dialog.EditedRichXaml;
                 entry.IsDone = dialog.EditedIsDone;
                 _diaryService.UpdateEntry(entry);
                 RefreshDiaryList();
@@ -976,16 +988,55 @@ public partial class MainWindow : Window
         }
     }
 
+    private void InsertDiaryCheckBoxButton_Click(object sender, RoutedEventArgs e)
+    {
+        DiaryRichTextHelper.InsertSecondaryCheckBox(DiaryRichTextBox);
+    }
+
     private void RecordDiaryInput()
     {
-        string text = DiaryInputTextBox.Text.Trim();
+        string text = DiaryRichTextHelper.ExtractPlainText(DiaryRichTextBox.Document);
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        var entry = _diaryService.AddEntry(text, DiaryDatePicker.SelectedDate ?? DateTime.Today);
-        DiaryInputTextBox.Clear();
+        string richXaml = DiaryRichTextHelper.SerializeDocument(DiaryRichTextBox.Document);
+        var entry = _diaryService.AddEntry(text, DiaryDatePicker.SelectedDate ?? DateTime.Today, richXaml);
+        DiaryRichTextHelper.ClearDocument(DiaryRichTextBox);
         RefreshDiaryList();
         ShowStatus($"Diario registrato ({entry.DateFormatted} {entry.TimeFormatted})", isError: false);
     }
+
+    private void ThemeToggleButton_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+
+        bool isDark = ThemeToggleButton.IsChecked == true;
+        var settings = SettingsService.Load();
+        settings.IsDarkTheme = isDark;
+        SettingsService.Save(settings);
+
+        ApplyTheme(isDark);
+    }
+
+    private void ApplyTheme(bool isDark)
+    {
+        Resources["AppBgBrush"] = BrushFromHex(isDark ? "#0B1120" : "#F1F5F9");
+        Resources["SurfaceBgBrush"] = BrushFromHex(isDark ? "#1E293B" : "#FFFFFF");
+        Resources["SurfaceBorderBrush"] = BrushFromHex(isDark ? "#334155" : "#CBD5E1");
+        Resources["InputBgBrush"] = BrushFromHex(isDark ? "#0F172A" : "#FFFFFF");
+        Resources["DropZoneBgBrush"] = BrushFromHex(isDark ? "#0F172A" : "#F8FAFC");
+        Resources["PrimaryTextBrush"] = BrushFromHex(isDark ? "#F8FAFC" : "#0F172A");
+        Resources["SecondaryTextBrush"] = BrushFromHex(isDark ? "#CBD5E1" : "#475569");
+        Resources["MutedTextBrush"] = BrushFromHex(isDark ? "#94A3B8" : "#64748B");
+
+        _diaryService.IsDarkTheme = isDark;
+        if (IsLoaded)
+        {
+            RefreshDiaryList();
+        }
+    }
+
+    private static SolidColorBrush BrushFromHex(string hex) =>
+        new((Color)ColorConverter.ConvertFromString(hex));
 
     private void DiaryDatePicker_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
     {

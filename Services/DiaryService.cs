@@ -24,6 +24,17 @@ public class DiaryService
         ("#F0F9FF", "#BAE6FD")  // Pastel Sky
     ];
 
+    private static readonly (string Bg, string Border)[] DarkPastelPalette =
+    [
+        ("#172554", "#1E40AF"), // Deep Pastel Blue
+        ("#064E3B", "#047857"), // Deep Pastel Mint
+        ("#2E1065", "#6D28D9"), // Deep Pastel Lavender
+        ("#4C0519", "#BE123C"), // Deep Pastel Rose
+        ("#0C4A6E", "#0369A1")  // Deep Pastel Sky
+    ];
+
+    public bool IsDarkTheme { get; set; }
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
@@ -46,7 +57,7 @@ public class DiaryService
         LoadIndex();
     }
 
-    public DiaryEntry AddEntry(string text, DateTime? targetDate = null)
+    public DiaryEntry AddEntry(string text, DateTime? targetDate = null, string? richContentXaml = null)
     {
         var now = DateTime.Now;
         var stamp = targetDate.HasValue && targetDate.Value.Date != now.Date
@@ -56,7 +67,8 @@ public class DiaryService
         var entry = new DiaryEntry
         {
             Timestamp = stamp,
-            Text = text.Trim()
+            Text = text.Trim(),
+            RichContentXaml = richContentXaml
         };
 
         _entries.Add(entry);
@@ -71,6 +83,7 @@ public class DiaryService
         if (existing is null) return;
 
         existing.Text = updated.Text.Trim();
+        existing.RichContentXaml = updated.RichContentXaml;
         existing.IsDone = updated.IsDone;
         SaveIndex();
         SyncDailyMarkdownFile(existing.Timestamp.Date);
@@ -199,10 +212,11 @@ public class DiaryService
             }
         }
 
+        var palette = IsDarkTheme ? DarkPastelPalette : PastelPalette;
         var ordered = results.OrderByDescending(e => e.Timestamp).ToList();
         for (int i = 0; i < ordered.Count; i++)
         {
-            var (bg, border) = PastelPalette[i % PastelPalette.Length];
+            var (bg, border) = palette[i % palette.Length];
             ordered[i].RowBackgroundHex = bg;
             ordered[i].RowBorderHex = border;
         }

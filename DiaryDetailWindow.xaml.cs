@@ -11,7 +11,8 @@ public partial class DiaryDetailWindow : Window
 {
     private readonly DiaryService _diaryService;
 
-    public string EditedText => NoteTextBox.Text.Trim();
+    public string EditedText => DiaryRichTextHelper.ExtractPlainText(NoteRichTextBox.Document);
+    public string EditedRichXaml => DiaryRichTextHelper.SerializeDocument(NoteRichTextBox.Document);
     public bool EditedIsDone => DoneCheckBox.IsChecked == true;
 
     public DiaryDetailWindow(DiaryEntry entry, DiaryService diaryService)
@@ -21,7 +22,7 @@ public partial class DiaryDetailWindow : Window
 
         TimestampTextBlock.Text = $"📅 {entry.DateFormatted}   🕒 {entry.TimeFormatted}";
         DoneCheckBox.IsChecked = entry.IsDone;
-        NoteTextBox.Text = entry.Text;
+        NoteRichTextBox.Document = DiaryRichTextHelper.LoadDocument(entry.RichContentXaml, entry.Text);
 
         if (entry.Attachments.Count > 0)
         {
@@ -29,7 +30,12 @@ public partial class DiaryDetailWindow : Window
             AttachmentsItemsControl.ItemsSource = entry.Attachments;
         }
 
-        Loaded += (_, _) => NoteTextBox.Focus();
+        Loaded += (_, _) => NoteRichTextBox.Focus();
+    }
+
+    private void InsertCheckBoxButton_Click(object sender, RoutedEventArgs e)
+    {
+        DiaryRichTextHelper.InsertSecondaryCheckBox(NoteRichTextBox);
     }
 
     private void OpenAttachmentButton_Click(object sender, RoutedEventArgs e)
@@ -52,10 +58,10 @@ public partial class DiaryDetailWindow : Window
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(NoteTextBox.Text))
+        if (DiaryRichTextHelper.IsDocumentEmpty(NoteRichTextBox.Document))
         {
             MessageBox.Show("Il testo della nota non può essere vuoto.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
-            NoteTextBox.Focus();
+            NoteRichTextBox.Focus();
             return;
         }
 
