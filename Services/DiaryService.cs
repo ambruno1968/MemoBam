@@ -17,16 +17,16 @@ public class DiaryService
 
     private static readonly (string Bg, string Border)[] PastelPalette =
     [
-        ("#EFF6FF", "#BFDBFE"), // Pastel Blue
+        ("#EEF2FF", "#C7D2FE"), // Pastel Indigo
         ("#ECFDF5", "#A7F3D0"), // Pastel Mint
         ("#F5F3FF", "#DDD6FE"), // Pastel Lavender
-        ("#FFF1F2", "#FECDD3"), // Pastel Peach/Rose
+        ("#FFF1F2", "#FECDD3"), // Pastel Rose
         ("#F0F9FF", "#BAE6FD")  // Pastel Sky
     ];
 
     private static readonly (string Bg, string Border)[] DarkPastelPalette =
     [
-        ("#172554", "#1E40AF"), // Deep Pastel Blue
+        ("#1E1B4B", "#3730A3"), // Deep Pastel Indigo
         ("#064E3B", "#047857"), // Deep Pastel Mint
         ("#2E1065", "#6D28D9"), // Deep Pastel Lavender
         ("#4C0519", "#BE123C"), // Deep Pastel Rose

@@ -1019,11 +1019,11 @@ public partial class MainWindow : Window
 
     private void ApplyTheme(bool isDark)
     {
-        Resources["AppBgBrush"] = BrushFromHex(isDark ? "#0B1120" : "#F1F5F9");
-        Resources["SurfaceBgBrush"] = BrushFromHex(isDark ? "#1E293B" : "#FFFFFF");
-        Resources["SurfaceBorderBrush"] = BrushFromHex(isDark ? "#334155" : "#CBD5E1");
-        Resources["InputBgBrush"] = BrushFromHex(isDark ? "#0F172A" : "#FFFFFF");
-        Resources["DropZoneBgBrush"] = BrushFromHex(isDark ? "#0F172A" : "#F8FAFC");
+        Resources["AppBgBrush"] = BrushFromHex(isDark ? "#090D16" : "#F4F6FB");
+        Resources["SurfaceBgBrush"] = BrushFromHex(isDark ? "#E8131B2E" : "#F0FFFFFF");
+        Resources["SurfaceBorderBrush"] = BrushFromHex(isDark ? "#26324D" : "#DCE3F0");
+        Resources["InputBgBrush"] = BrushFromHex(isDark ? "#0D1322" : "#FFFFFF");
+        Resources["DropZoneBgBrush"] = BrushFromHex(isDark ? "#CC171F36" : "#CCEEF2FF");
         Resources["PrimaryTextBrush"] = BrushFromHex(isDark ? "#F8FAFC" : "#0F172A");
         Resources["SecondaryTextBrush"] = BrushFromHex(isDark ? "#CBD5E1" : "#475569");
         Resources["MutedTextBrush"] = BrushFromHex(isDark ? "#94A3B8" : "#64748B");

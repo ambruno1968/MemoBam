@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.2.0] - 2026-11-20
+
+### Aggiunto
+- **Note ricche e formattazione nel Diario**: campo note multi-riga con tasto `💾 Salva`, finestra dedicata di lettura/modifica (`DiaryDetailWindow`), barra di formattazione (`B` grassetto, `I` corsivo, `• Elenco`, `☑ Spunta` secondaria non ripetibile sulla stessa riga).
+- **Allegati collegati alle righe del Diario**: drag & drop diretto sulle righe o pulsante `📎 Allega` con salvataggio in `Diario\Allegati\`, ricerca per allegato ed eliminazione sincronizzata.
+- **Colori pastello alternati** sulle righe del Diario (con palette dedicata per tema chiaro e tema scuro).
+- **Tema Chiaro / Scuro** (`🌙 Scuro` / `☀️ Chiaro`) salvato nelle impostazioni, con nuova palette Indigo/Slate moderna e sfondo filigrana leggero e trasparente.
+- **Icona ufficiale MemoBam** multi-risoluzione (`Assets\memobam.ico`).
+
+### Risolto
+- Supporto multi-monitor completo per la modalità **Sfondo** (senza riposizionamento forzato sullo schermo principale) e spostamento libero del mini-riquadro Drag & Drop.
+
 ## [1.1.0] - 2026-11-20
 
 ### Aggiunto

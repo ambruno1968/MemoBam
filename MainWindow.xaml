@@ -29,15 +29,15 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <!-- Theme Brushes (Light default, dynamically switched for Dark theme) -->
-        <SolidColorBrush x:Key="AppBgBrush" Color="#F1F5F9"/>
-        <SolidColorBrush x:Key="SurfaceBgBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="SurfaceBorderBrush" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="AppBgBrush" Color="#F4F6FB"/>
+        <SolidColorBrush x:Key="SurfaceBgBrush" Color="#F0FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceBorderBrush" Color="#DCE3F0"/>
         <SolidColorBrush x:Key="InputBgBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="DropZoneBgBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="DropZoneBgBrush" Color="#CCEEF2FF"/>
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#0F172A"/>
         <SolidColorBrush x:Key="SecondaryTextBrush" Color="#475569"/>
         <SolidColorBrush x:Key="MutedTextBrush" Color="#64748B"/>
-        <SolidColorBrush x:Key="PillBgBrush" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="PillBgBrush" Color="#EEF2FF"/>
 
         <Style x:Key="ActionButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="9,5"/>
@@ -267,9 +267,14 @@
 
             <!-- Compact Header + Drag Bar -->
             <Border Grid.Row="0"
-                    Background="#0F172A"
                     Padding="14,10"
                     MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#0F172A" Offset="0"/>
+                        <GradientStop Color="#1E1B4B" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -585,6 +590,28 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- Subtle Transparent Watermark Background -->
+            <Grid Grid.Row="2" IsHitTestVisible="False" ClipToBounds="True">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Opacity="0.045">
+                    <StackPanel.RenderTransform>
+                        <RotateTransform Angle="-16" CenterX="180" CenterY="60"/>
+                    </StackPanel.RenderTransform>
+                    <Image Source="Assets/memobam.ico"
+                           Width="120"
+                           Height="120"
+                           Margin="0,0,18,0"
+                           VerticalAlignment="Center"/>
+                    <TextBlock Text="MemoBam"
+                               FontSize="76"
+                               FontWeight="Black"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Main Content (adapts between 2-column and vertical sidebar) -->
             <Grid x:Name="MainContentGrid" Grid.Row="2" Margin="12">

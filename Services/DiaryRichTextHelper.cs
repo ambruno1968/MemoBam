@@ -14,6 +14,13 @@ public static class DiaryRichTextHelper
 {
     public static void InsertSecondaryCheckBox(RichTextBox rtb)
     {
+        var paragraph = rtb.CaretPosition.Paragraph;
+        if (paragraph is not null && ParagraphHasCheckBox(paragraph.Inlines))
+        {
+            rtb.Focus();
+            return;
+        }
+
         var checkBox = new CheckBox
         {
             IsChecked = false,
@@ -21,10 +28,26 @@ public static class DiaryRichTextHelper
             Margin = new Thickness(0, 0, 5, 0)
         };
 
-        var caret = rtb.CaretPosition;
-        var container = new InlineUIContainer(checkBox, caret);
+        var insertPos = paragraph is not null ? paragraph.ContentStart : rtb.CaretPosition;
+        var container = new InlineUIContainer(checkBox, insertPos);
         rtb.CaretPosition = container.ElementEnd;
         rtb.Focus();
+    }
+
+    private static bool ParagraphHasCheckBox(InlineCollection inlines)
+    {
+        foreach (var inline in inlines)
+        {
+            if (inline is InlineUIContainer { Child: CheckBox })
+            {
+                return true;
+            }
+            if (inline is Span span && ParagraphHasCheckBox(span.Inlines))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static string SerializeDocument(FlowDocument document)
