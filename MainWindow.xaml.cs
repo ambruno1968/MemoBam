@@ -129,6 +129,7 @@ public partial class MainWindow : Window
 
         RefreshCardsList();
         RefreshDiaryList();
+        Loaded += async (_, _) => await CheckForUpdatesOnStartupAsync();
     }
 
     #region Custom Window Chrome Controls
@@ -1479,6 +1480,38 @@ public partial class MainWindow : Window
 
     #endregion
 
+    private async Task CheckForUpdatesOnStartupAsync()
+    {
+        try
+        {
+            var updater = new UpdateService();
+            var update = await updater.CheckForUpdateAsync();
+            if (update is null) return;
+
+            var current = UpdateService.CurrentVersion;
+            var result = MessageBox.Show(
+                $"È disponibile una nuova versione di MemoBam ({update.TagName}).\n" +
+                $"Versione attuale: v{current.Major}.{current.Minor}.{current.Build}\n\n" +
+                $"Vuoi scaricarla e installarla ora?",
+                "Aggiornamento disponibile",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            var progress = new Progress<string>(msg => ShowStatus(msg, false));
+            bool shouldRestart = await updater.DownloadAndApplyAsync(update, progress);
+            if (shouldRestart)
+            {
+                Application.Current.Shutdown();
+            }
+        }
+        catch
+        {
+            // Startup update check is best-effort; ignore offline/network errors silently.
+        }
+    }
+
     private void PwaQrButton_Click(object sender, RoutedEventArgs e)
     {
         QrOverlay.Visibility = Visibility.Visible;
@@ -1510,7 +1543,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            ShowStatus($"Impossibile aprire il link: {ex.Message}");
+            ShowStatus($"Impossibile aprire il link: {ex.Message}", true);
         }
     }
 

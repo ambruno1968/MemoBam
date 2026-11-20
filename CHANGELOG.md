@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.5.0] - 2026-11-20
+
+### Aggiunto
+- **QR Code PWA & Credit in barra superiore**: aggiunto il pulsante `by Bruno Astemio • 📱 PWA` con anteprima QR cliccabile che apre la finestra ingrandita per accedere rapidamente alla PWA di sola lettura (`https://ambruno1968.github.io/MemoBamPWA/`).
+- **Controllo aggiornamenti automatico all'avvio**: `UpdateService` verifica le release su GitHub all'avvio dell'applicazione e, se disponibile una nuova versione, propone il download, la sostituzione dei file e il riavvio automatico.
+- **Distribuzione organizzata**: aggiunti `publish-dist.ps1` (genera pacchetto `dist/MemoBam-vX.Y.Z-win-x64.zip`) e il workflow GitHub Actions `.github/workflows/release.yml` per il rilascio automatico su tag `v*`.
+
 ## [1.4.0] - 2026-11-20
 
 ### Aggiunto
