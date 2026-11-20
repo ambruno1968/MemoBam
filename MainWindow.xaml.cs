@@ -17,9 +17,11 @@ public partial class MainWindow : Window
     private ArchiveService _archiveService;
     private DiaryService _diaryService;
     private readonly DispatcherTimer _autoHideTimer;
+    private readonly DispatcherTimer _hoverExpandTimer;
     private bool _isCollapsed;
     private bool _isMiniDropMode;
     private bool _isDialogOpen;
+    private bool _isProgrammaticMove;
     private double _anchoredLeft;
     private double _anchoredTop;
     private double _expandedWidth = 1120;
@@ -27,8 +29,8 @@ public partial class MainWindow : Window
 
     private const double CollapsedStripThickness = 22;
     private const double MiniDropWidth = 270;
-    private const double MiniDropHeight = 155;
-    private const byte BackgroundIdleAlpha = 165;
+    private const double MiniDropHeight = 165;
+    private const byte BackgroundIdleAlpha = 175;
 
     private static readonly Brush DropDefaultBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F8FAFC"));
     private static readonly Brush DropDefaultBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#94A3B8"));
@@ -64,16 +66,34 @@ public partial class MainWindow : Window
         };
         _autoHideTimer.Tick += AutoHideTimer_Tick;
 
+        _hoverExpandTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(450)
+        };
+        _hoverExpandTimer.Tick += (_, _) =>
+        {
+            _hoverExpandTimer.Stop();
+            if (_isMiniDropMode && IsMouseOver)
+            {
+                ExpandFromMiniDrop();
+            }
+        };
+
+        LocationChanged += (_, _) =>
+        {
+            if (!_isProgrammaticMove && IsLoaded && WindowState == WindowState.Normal && !_isCollapsed)
+            {
+                _anchoredLeft = Left;
+                _anchoredTop = Top;
+            }
+        };
+
         MouseEnter += (_, _) =>
         {
             _autoHideTimer.Stop();
             if (_isCollapsed)
             {
                 ExpandFromAutoHide();
-            }
-            else if (_isMiniDropMode)
-            {
-                ExpandFromMiniDrop();
             }
         };
 
@@ -200,17 +220,37 @@ public partial class MainWindow : Window
         _autoHideTimer.Stop();
         if (_isMiniDropMode)
         {
-            ExpandFromMiniDrop();
+            WindowBackdropHelper.SetWindowOpacity(this, 255);
+            _hoverExpandTimer.Start();
+        }
+    }
+
+    private void MiniDropOverlay_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _hoverExpandTimer.Stop();
+        if (_isMiniDropMode)
+        {
+            WindowBackdropHelper.SetWindowOpacity(this, BackgroundIdleAlpha);
         }
     }
 
     private void MiniDropOverlay_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _hoverExpandTimer.Stop();
         if (e.LeftButton == MouseButtonState.Pressed)
         {
             DragMove();
             _anchoredLeft = Left;
             _anchoredTop = Top;
+        }
+    }
+
+    private void MiniDropOpenButton_Click(object sender, RoutedEventArgs e)
+    {
+        _hoverExpandTimer.Stop();
+        if (_isMiniDropMode)
+        {
+            ExpandFromMiniDrop();
         }
     }
 
@@ -295,43 +335,51 @@ public partial class MainWindow : Window
         RootContentGrid.Visibility = Visibility.Visible;
         WindowBackdropHelper.SetWindowOpacity(this, 255);
 
-        var workArea = SystemParameters.WorkArea;
+        var workArea = WindowBackdropHelper.GetCurrentMonitorWorkArea(this);
         WindowState = WindowState.Normal;
 
-        if (DockBottomRadio.IsChecked == true)
+        _isProgrammaticMove = true;
+        try
         {
-            ApplyHorizontalLayout(compactDropZone: true);
-            double barHeight = Math.Min(330, workArea.Height * 0.42);
-            Left = workArea.Left;
-            Width = workArea.Width;
-            Height = barHeight;
-            Top = workArea.Bottom - barHeight;
+            if (DockBottomRadio.IsChecked == true)
+            {
+                ApplyHorizontalLayout(compactDropZone: true);
+                double barHeight = Math.Min(330, workArea.Height * 0.42);
+                Left = workArea.Left;
+                Width = workArea.Width;
+                Height = barHeight;
+                Top = workArea.Bottom - barHeight;
+            }
+            else if (DockLeftRadio.IsChecked == true)
+            {
+                ApplyVerticalSidebarLayout();
+                double barWidth = Math.Min(440, workArea.Width * 0.36);
+                Left = workArea.Left;
+                Top = workArea.Top;
+                Width = barWidth;
+                Height = workArea.Height;
+            }
+            else if (DockRightRadio.IsChecked == true)
+            {
+                ApplyVerticalSidebarLayout();
+                double barWidth = Math.Min(440, workArea.Width * 0.36);
+                Left = workArea.Right - barWidth;
+                Top = workArea.Top;
+                Width = barWidth;
+                Height = workArea.Height;
+            }
+            else
+            {
+                ApplyHorizontalLayout(compactDropZone: false);
+                Width = _expandedWidth;
+                Height = _expandedHeight;
+                Left = workArea.Left + (workArea.Width - Width) / 2;
+                Top = workArea.Top + (workArea.Height - Height) / 2;
+            }
         }
-        else if (DockLeftRadio.IsChecked == true)
+        finally
         {
-            ApplyVerticalSidebarLayout();
-            double barWidth = Math.Min(440, workArea.Width * 0.36);
-            Left = workArea.Left;
-            Top = workArea.Top;
-            Width = barWidth;
-            Height = workArea.Height;
-        }
-        else if (DockRightRadio.IsChecked == true)
-        {
-            ApplyVerticalSidebarLayout();
-            double barWidth = Math.Min(440, workArea.Width * 0.36);
-            Left = workArea.Right - barWidth;
-            Top = workArea.Top;
-            Width = barWidth;
-            Height = workArea.Height;
-        }
-        else
-        {
-            ApplyHorizontalLayout(compactDropZone: false);
-            Width = _expandedWidth;
-            Height = _expandedHeight;
-            Left = workArea.Left + (workArea.Width - Width) / 2;
-            Top = workArea.Top + (workArea.Height - Height) / 2;
+            _isProgrammaticMove = false;
         }
     }
 
@@ -339,38 +387,46 @@ public partial class MainWindow : Window
     {
         if (!IsAutoHideActive || _isCollapsed) return;
 
-        var workArea = SystemParameters.WorkArea;
+        var workArea = WindowBackdropHelper.GetCurrentMonitorWorkArea(this);
         _isCollapsed = true;
         RootContentGrid.Visibility = Visibility.Collapsed;
         MiniDropOverlay.Visibility = Visibility.Collapsed;
         CollapsedStripBorder.Visibility = Visibility.Visible;
 
-        if (DockRightRadio.IsChecked == true)
+        _isProgrammaticMove = true;
+        try
         {
-            CollapsedStripLabel.Text = "◀ MemoBam";
-            CollapsedStripLabel.LayoutTransform = new RotateTransform(-90);
-            Left = workArea.Right - CollapsedStripThickness;
-            Top = workArea.Top;
-            Width = CollapsedStripThickness;
-            Height = workArea.Height;
+            if (DockRightRadio.IsChecked == true)
+            {
+                CollapsedStripLabel.Text = "◀ MemoBam";
+                CollapsedStripLabel.LayoutTransform = new RotateTransform(-90);
+                Left = workArea.Right - CollapsedStripThickness;
+                Top = workArea.Top;
+                Width = CollapsedStripThickness;
+                Height = workArea.Height;
+            }
+            else if (DockLeftRadio.IsChecked == true)
+            {
+                CollapsedStripLabel.Text = "MemoBam ▶";
+                CollapsedStripLabel.LayoutTransform = new RotateTransform(-90);
+                Left = workArea.Left;
+                Top = workArea.Top;
+                Width = CollapsedStripThickness;
+                Height = workArea.Height;
+            }
+            else if (DockBottomRadio.IsChecked == true)
+            {
+                CollapsedStripLabel.Text = "▲ MemoBam";
+                CollapsedStripLabel.LayoutTransform = Transform.Identity;
+                Left = workArea.Left;
+                Width = workArea.Width;
+                Height = CollapsedStripThickness;
+                Top = workArea.Bottom - CollapsedStripThickness;
+            }
         }
-        else if (DockLeftRadio.IsChecked == true)
+        finally
         {
-            CollapsedStripLabel.Text = "MemoBam ▶";
-            CollapsedStripLabel.LayoutTransform = new RotateTransform(-90);
-            Left = workArea.Left;
-            Top = workArea.Top;
-            Width = CollapsedStripThickness;
-            Height = workArea.Height;
-        }
-        else if (DockBottomRadio.IsChecked == true)
-        {
-            CollapsedStripLabel.Text = "▲ MemoBam";
-            CollapsedStripLabel.LayoutTransform = Transform.Identity;
-            Left = workArea.Left;
-            Width = workArea.Width;
-            Height = CollapsedStripThickness;
-            Top = workArea.Bottom - CollapsedStripThickness;
+            _isProgrammaticMove = false;
         }
     }
 
@@ -420,6 +476,7 @@ public partial class MainWindow : Window
     {
         if (!IsBackgroundMiniModeActive || _isMiniDropMode) return;
 
+        _hoverExpandTimer.Stop();
         if (Width >= 500 && Height >= 400)
         {
             _anchoredLeft = Left;
@@ -436,10 +493,18 @@ public partial class MainWindow : Window
         ResizeMode = ResizeMode.NoResize;
         Topmost = false;
 
-        Left = _anchoredLeft;
-        Top = _anchoredTop;
-        Width = MiniDropWidth;
-        Height = MiniDropHeight;
+        _isProgrammaticMove = true;
+        try
+        {
+            Left = _anchoredLeft;
+            Top = _anchoredTop;
+            Width = MiniDropWidth;
+            Height = MiniDropHeight;
+        }
+        finally
+        {
+            _isProgrammaticMove = false;
+        }
 
         WindowBackdropHelper.SetWindowOpacity(this, BackgroundIdleAlpha);
         WindowBackdropHelper.SendToBottom(this);
@@ -448,6 +513,7 @@ public partial class MainWindow : Window
     private void ExpandFromMiniDrop()
     {
         _autoHideTimer.Stop();
+        _hoverExpandTimer.Stop();
         if (!_isMiniDropMode) return;
 
         _isMiniDropMode = false;
@@ -458,11 +524,20 @@ public partial class MainWindow : Window
         ResizeMode = ResizeMode.CanResize;
         WindowBackdropHelper.SetWindowOpacity(this, 255);
 
-        var workArea = SystemParameters.WorkArea;
-        Width = _expandedWidth;
-        Height = _expandedHeight;
-        Left = Math.Max(workArea.Left, Math.Min(_anchoredLeft, workArea.Right - Width));
-        Top = Math.Max(workArea.Top, Math.Min(_anchoredTop, workArea.Bottom - Height));
+        var workArea = WindowBackdropHelper.GetCurrentMonitorWorkArea(this);
+        _isProgrammaticMove = true;
+        try
+        {
+            Width = _expandedWidth;
+            Height = _expandedHeight;
+            Left = Math.Max(workArea.Left, Math.Min(_anchoredLeft, workArea.Right - Width));
+            Top = Math.Max(workArea.Top, Math.Min(_anchoredTop, workArea.Bottom - Height));
+        }
+        finally
+        {
+            _isProgrammaticMove = false;
+        }
+
         Activate();
     }
 

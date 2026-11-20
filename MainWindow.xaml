@@ -171,41 +171,77 @@
                 BorderBrush="#2563EB"
                 BorderThickness="2"
                 CornerRadius="12"
-                Padding="12"
                 AllowDrop="True"
                 DragEnter="DropZone_DragEnter"
                 DragOver="DropZone_DragOver"
                 DragLeave="DropZone_DragLeave"
                 Drop="DropZone_Drop"
                 MouseEnter="MiniDropOverlay_MouseEnter"
-                MouseLeftButtonDown="MiniDropOverlay_MouseLeftButtonDown"
-                ToolTip="Trascina qui un documento per archiviarlo, oppure passa il mouse per aprire MemoBam">
+                MouseLeave="MiniDropOverlay_MouseLeave"
+                ToolTip="Trascina qui un file per archiviarlo, oppure trascina la barra in alto per spostare">
             <Grid>
-                <Rectangle Stroke="#94A3B8"
-                           StrokeThickness="1.5"
-                           StrokeDashArray="4 3"
-                           RadiusX="8"
-                           RadiusY="8"
-                           Margin="-4"
-                           IsHitTestVisible="False"/>
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="📥"
-                               FontSize="30"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,4"/>
-                    <TextBlock Text="MemoBam — Trascina qui"
-                               FontSize="13.5"
-                               FontWeight="Bold"
-                               Foreground="#0F172A"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"/>
-                    <TextBlock Text="Passa il mouse per aprire la finestra"
-                               FontSize="11"
-                               Foreground="#64748B"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top Drag Handle + Quick Open -->
+                <Border Grid.Row="0"
+                        Background="#0F172A"
+                        CornerRadius="10,10,0,0"
+                        Padding="10,5"
+                        Cursor="SizeAll"
+                        MouseLeftButtonDown="MiniDropOverlay_MouseLeftButtonDown">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="⠿ MemoBam (sposta)"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="#E2E8F0"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="Apri"
+                                Click="MiniDropOpenButton_Click"
+                                Padding="8,2"
+                                FontSize="10.5"
+                                FontWeight="SemiBold"
+                                Background="#2563EB"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"/>
+                    </Grid>
+                </Border>
+
+                <!-- Drop Area -->
+                <Grid Grid.Row="1" Margin="10">
+                    <Rectangle Stroke="#94A3B8"
+                               StrokeThickness="1.5"
+                               StrokeDashArray="4 3"
+                               RadiusX="8"
+                               RadiusY="8"
+                               IsHitTestVisible="False"/>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6">
+                        <TextBlock Text="📥"
+                                   FontSize="26"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,2"/>
+                        <TextBlock Text="Trascina qui i documenti"
+                                   FontSize="13"
+                                   FontWeight="Bold"
+                                   Foreground="#0F172A"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"/>
+                        <TextBlock Text="o attendi un attimo per aprire"
+                                   FontSize="10.5"
+                                   Foreground="#64748B"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
 
