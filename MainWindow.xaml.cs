@@ -936,12 +936,43 @@ public partial class MainWindow : Window
         RecordDiaryInput();
     }
 
-    private void DiaryInputTextBox_KeyDown(object sender, KeyEventArgs e)
+    private void DiaryListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        if (DiaryListBox.SelectedItem is DiaryEntry entry)
         {
-            RecordDiaryInput();
-            e.Handled = true;
+            OpenDiaryEntryDetail(entry);
+        }
+    }
+
+    private void OpenDiaryEntryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: DiaryEntry entry })
+        {
+            OpenDiaryEntryDetail(entry);
+        }
+    }
+
+    private void OpenDiaryEntryDetail(DiaryEntry entry)
+    {
+        var dialog = new DiaryDetailWindow(entry, _diaryService)
+        {
+            Owner = this
+        };
+
+        _isDialogOpen = true;
+        try
+        {
+            if (dialog.ShowDialog() == true)
+            {
+                entry.Text = dialog.EditedText;
+                entry.IsDone = dialog.EditedIsDone;
+                _diaryService.UpdateEntry(entry);
+                RefreshDiaryList();
+            }
+        }
+        finally
+        {
+            _isDialogOpen = false;
         }
     }
 
@@ -1244,6 +1275,7 @@ public partial class MainWindow : Window
             RefreshDiaryList();
             DiaryListBox.SelectedItem = diaryEntry;
             DiaryListBox.ScrollIntoView(diaryEntry);
+            OpenDiaryEntryDetail(diaryEntry);
         }
     }
 

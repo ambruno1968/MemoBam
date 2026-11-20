@@ -1067,15 +1067,20 @@
                                     <TextBox x:Name="DiaryInputTextBox"
                                              Padding="10,7"
                                              FontSize="13"
+                                             MinHeight="68"
+                                             MaxHeight="130"
                                              BorderBrush="#CBD5E1"
                                              BorderThickness="1"
-                                             AcceptsReturn="False"
-                                             KeyDown="DiaryInputTextBox_KeyDown"/>
-                                    <TextBlock Text="Cosa hai fatto? Scrivi l'attività e premi Invio..."
+                                             TextWrapping="Wrap"
+                                             AcceptsReturn="True"
+                                             VerticalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top"/>
+                                    <TextBlock Text="Scrivi le note dell'attività (puoi usare Invio per andare a capo), poi clicca Salva..."
                                                Foreground="#94A3B8"
                                                FontSize="12.5"
-                                               Margin="12,0,8,0"
-                                               VerticalAlignment="Center"
+                                               Margin="12,8,8,0"
+                                               VerticalAlignment="Top"
+                                               TextWrapping="Wrap"
                                                IsHitTestVisible="False">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -1091,9 +1096,10 @@
                                 </Grid>
 
                                 <Button Grid.Column="2"
-                                        Content="✓ Registra"
+                                        Content="💾 Salva"
                                         Click="AddDiaryEntryButton_Click"
                                         Padding="14,7"
+                                        VerticalAlignment="Top"
                                         Background="#2563EB"
                                         Foreground="White"
                                         FontWeight="Bold"
@@ -1117,7 +1123,8 @@
                                  Background="Transparent"
                                  BorderThickness="0"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 HorizontalContentAlignment="Stretch">
+                                 HorizontalContentAlignment="Stretch"
+                                 MouseDoubleClick="DiaryListBox_MouseDoubleClick">
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
                                     <Setter Property="Padding" Value="0"/>
@@ -1240,6 +1247,13 @@
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <Button Content="Apri"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Background="#2563EB"
+                                                        Foreground="White"
+                                                        Tag="{Binding}"
+                                                        Click="OpenDiaryEntryButton_Click"
+                                                        ToolTip="Apri la nota completa in lettura/modifica"/>
                                                 <Button Content="📎 Allega"
                                                         Style="{StaticResource ActionButtonStyle}"
                                                         Background="White"
