@@ -213,6 +213,7 @@
         <Grid x:Name="RootContentGrid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -398,8 +399,111 @@
                 </Grid>
             </Border>
 
+            <!-- Top Alert for Unchecked ("Da terminare") Items -->
+            <Border x:Name="PendingAlertContainer"
+                    Grid.Row="1"
+                    Background="#FEF3C7"
+                    BorderBrush="#F59E0B"
+                    BorderThickness="0,0,0,1"
+                    Padding="14,8"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock x:Name="PendingAlertSummaryText"
+                                   Text="⚠️ Hai 0 elementi da terminare"
+                                   FontSize="12.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="#92400E"
+                                   VerticalAlignment="Center"/>
+
+                        <ToggleButton x:Name="PendingAlertToggleButton"
+                                      Grid.Column="1"
+                                      Checked="PendingAlertToggleButton_Changed"
+                                      Unchecked="PendingAlertToggleButton_Changed"
+                                      Cursor="Hand">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="#F59E0B" CornerRadius="6" Padding="10,4">
+                                        <TextBlock x:Name="AlertBtnText"
+                                                   Text="Visualizza elenco ▾"
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="White"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="AlertBtnText" Property="Text" Value="Nascondi elenco ▴"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                    </Grid>
+
+                    <ItemsControl x:Name="PendingAlertItemsControl"
+                                  Visibility="Collapsed"
+                                  Margin="0,8,0,0"
+                                  MaxHeight="170">
+                        <ItemsControl.Template>
+                            <ControlTemplate TargetType="ItemsControl">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="White"
+                                        BorderBrush="#FCD34D"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="10,6"
+                                        Margin="0,0,0,5">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Background="#FEF3C7" CornerRadius="4" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SourceBadge}" FontSize="10.5" FontWeight="Bold" Foreground="#B45309"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Summary}" FontSize="12.5" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding DateTimeLabel}" FontSize="10.5" Foreground="#64748B"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                            <Button Content="Apri"
+                                                    Style="{StaticResource ActionButtonStyle}"
+                                                    Background="#2563EB"
+                                                    Foreground="White"
+                                                    Tag="{Binding}"
+                                                    Click="OpenPendingAlertItem_Click"/>
+                                            <Button Content="✓ Fatto"
+                                                    Style="{StaticResource ActionButtonStyle}"
+                                                    Background="#10B981"
+                                                    Foreground="White"
+                                                    Tag="{Binding}"
+                                                    Click="MarkPendingAlertItemDone_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- Main Content (adapts between 2-column and vertical sidebar) -->
-            <Grid x:Name="MainContentGrid" Grid.Row="1" Margin="12">
+            <Grid x:Name="MainContentGrid" Grid.Row="2" Margin="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="LeftColumnDef" Width="320"/>
                     <ColumnDefinition x:Name="SpacerColumnDef" Width="12"/>
@@ -700,19 +804,42 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="White"
-                                            CornerRadius="10"
-                                            BorderBrush="#CBD5E1"
+                                    <Border CornerRadius="10"
                                             BorderThickness="1"
                                             Padding="12,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDone}" Value="False">
+                                                        <Setter Property="Background" Value="#FFFBEB"/>
+                                                        <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <Border Grid.Column="0"
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsDone, Mode=OneWay}"
+                                                      Tag="{Binding}"
+                                                      Click="ArchiveDoneCheckBox_Click"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,10,0"
+                                                      ToolTip="Fatto (togli la spunta per ricordarti di terminarlo)">
+                                                <CheckBox.LayoutTransform>
+                                                    <ScaleTransform ScaleX="1.15" ScaleY="1.15"/>
+                                                </CheckBox.LayoutTransform>
+                                            </CheckBox>
+
+                                            <Border Grid.Column="1"
                                                     Width="44"
                                                     Height="44"
                                                     CornerRadius="8"
@@ -729,7 +856,7 @@
                                                            VerticalAlignment="Center"/>
                                             </Border>
 
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Title}"
                                                            FontSize="14"
                                                            FontWeight="Bold"
@@ -772,7 +899,7 @@
                                                            Margin="0,4,0,0"/>
                                             </StackPanel>
 
-                                            <WrapPanel Grid.Column="2"
+                                            <WrapPanel Grid.Column="3"
                                                        Orientation="Horizontal"
                                                        VerticalAlignment="Center"
                                                        Margin="8,0,0,0">
@@ -971,19 +1098,42 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="White"
-                                            CornerRadius="9"
-                                            BorderBrush="#CBD5E1"
+                                    <Border CornerRadius="9"
                                             BorderThickness="1"
                                             Padding="12,9">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDone}" Value="False">
+                                                        <Setter Property="Background" Value="#FFFBEB"/>
+                                                        <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <Border Grid.Column="0"
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsDone, Mode=OneWay}"
+                                                      Tag="{Binding}"
+                                                      Click="DiaryDoneCheckBox_Click"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,10,0"
+                                                      ToolTip="Fatto (togli la spunta per ricordarti di terminarlo)">
+                                                <CheckBox.LayoutTransform>
+                                                    <ScaleTransform ScaleX="1.15" ScaleY="1.15"/>
+                                                </CheckBox.LayoutTransform>
+                                            </CheckBox>
+
+                                            <Border Grid.Column="1"
                                                     Background="#F1F5F9"
                                                     CornerRadius="6"
                                                     Padding="8,4"
@@ -997,14 +1147,14 @@
                                                 </TextBlock>
                                             </Border>
 
-                                            <TextBlock Grid.Column="1"
+                                            <TextBlock Grid.Column="2"
                                                        Text="{Binding Text}"
                                                        FontSize="13"
                                                        Foreground="#0F172A"
                                                        TextWrapping="Wrap"
                                                        VerticalAlignment="Center"/>
 
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                                                 <Button Content="Elimina"
                                                         Style="{StaticResource ActionButtonStyle}"
                                                         Background="#FEE2E2"

@@ -525,6 +525,7 @@ public partial class MainWindow : Window
 
         ResultsSummaryTextBlock.Text = filtered.Count == 1 ? "1 scheda trovata" : $"{filtered.Count} schede trovate";
         EmptyStateTextBlock.Visibility = filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RefreshPendingAlerts();
     }
 
     private void ArchiveDroppedOrSelectedPaths(string[] paths)
@@ -833,6 +834,7 @@ public partial class MainWindow : Window
             : $"{entries.Count} attività registrate {dayLabel}";
 
         DiaryEmptyTextBlock.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RefreshPendingAlerts();
     }
 
     private void AddDiaryEntryButton_Click(object sender, RoutedEventArgs e)
@@ -917,6 +919,116 @@ public partial class MainWindow : Window
         finally
         {
             _isDialogOpen = false;
+        }
+    }
+
+    #endregion
+
+    #region Pending Alerts & Done CheckBoxes
+
+    private void RefreshPendingAlerts()
+    {
+        var pending = new List<PendingAlertItem>();
+
+        foreach (var item in _archiveService.GetPendingItems())
+        {
+            pending.Add(new PendingAlertItem
+            {
+                SourceBadge = "📁 Archivio",
+                Summary = item.Title,
+                DateTimeLabel = $"{item.DateFormatted} {item.TimeFormatted}",
+                ArchiveItem = item
+            });
+        }
+
+        foreach (var entry in _diaryService.GetPendingEntries())
+        {
+            pending.Add(new PendingAlertItem
+            {
+                SourceBadge = "📓 Diario",
+                Summary = entry.Text,
+                DateTimeLabel = $"{entry.DateFormatted} {entry.TimeFormatted}",
+                DiaryEntry = entry
+            });
+        }
+
+        if (pending.Count == 0)
+        {
+            PendingAlertContainer.Visibility = Visibility.Collapsed;
+            PendingAlertToggleButton.IsChecked = false;
+            PendingAlertItemsControl.Visibility = Visibility.Collapsed;
+            PendingAlertItemsControl.ItemsSource = null;
+            return;
+        }
+
+        PendingAlertContainer.Visibility = Visibility.Visible;
+        PendingAlertSummaryText.Text = pending.Count == 1
+            ? "⚠️ Hai 1 elemento non spuntato da terminare"
+            : $"⚠️ Hai {pending.Count} elementi non spuntati da terminare";
+        PendingAlertItemsControl.ItemsSource = pending;
+    }
+
+    private void PendingAlertToggleButton_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        PendingAlertItemsControl.Visibility = PendingAlertToggleButton.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void ArchiveDoneCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: ArchiveItem item } cb) return;
+
+        bool isDone = cb.IsChecked == true;
+        _archiveService.SetDone(item, isDone);
+        RefreshCardsList();
+    }
+
+    private void DiaryDoneCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: DiaryEntry entry } cb) return;
+
+        bool isDone = cb.IsChecked == true;
+        _diaryService.SetDone(entry, isDone);
+        RefreshDiaryList();
+    }
+
+    private void OpenPendingAlertItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PendingAlertItem alert }) return;
+
+        if (alert.ArchiveItem is { } archiveItem)
+        {
+            ArchiveTabRadio.IsChecked = true;
+            CardsListBox.SelectedItem = archiveItem;
+            CardsListBox.ScrollIntoView(archiveItem);
+            OpenItem(archiveItem);
+        }
+        else if (alert.DiaryEntry is { } diaryEntry)
+        {
+            DiaryTabRadio.IsChecked = true;
+            DiaryDatePicker.SelectedDate = diaryEntry.Timestamp.Date;
+            DiarySearchTextBox.Clear();
+            RefreshDiaryList();
+            DiaryListBox.SelectedItem = diaryEntry;
+            DiaryListBox.ScrollIntoView(diaryEntry);
+        }
+    }
+
+    private void MarkPendingAlertItemDone_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PendingAlertItem alert }) return;
+
+        if (alert.ArchiveItem is { } archiveItem)
+        {
+            _archiveService.SetDone(archiveItem, true);
+            RefreshCardsList();
+        }
+        else if (alert.DiaryEntry is { } diaryEntry)
+        {
+            _diaryService.SetDone(diaryEntry, true);
+            RefreshDiaryList();
         }
     }
 

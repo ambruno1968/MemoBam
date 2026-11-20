@@ -119,8 +119,21 @@ public class ArchiveService
 
         existing.Title = updated.Title.Trim();
         existing.Notes = updated.Notes.Trim();
+        existing.IsDone = updated.IsDone;
         SaveIndex();
     }
+
+    public void SetDone(ArchiveItem item, bool isDone)
+    {
+        var existing = _items.FirstOrDefault(i => i.Id == item.Id);
+        if (existing is null) return;
+
+        existing.IsDone = isDone;
+        SaveIndex();
+    }
+
+    public List<ArchiveItem> GetPendingItems() =>
+        _items.Where(i => !i.IsDone).OrderByDescending(i => i.ArchivedAt).ToList();
 
     public void DeleteItem(ArchiveItem item, bool deletePhysicalFile)
     {

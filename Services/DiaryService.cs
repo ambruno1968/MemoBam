@@ -60,9 +60,23 @@ public class DiaryService
         if (existing is null) return;
 
         existing.Text = updated.Text.Trim();
+        existing.IsDone = updated.IsDone;
         SaveIndex();
         SyncDailyMarkdownFile(existing.Timestamp.Date);
     }
+
+    public void SetDone(DiaryEntry entry, bool isDone)
+    {
+        var existing = _entries.FirstOrDefault(e => e.Id == entry.Id);
+        if (existing is null) return;
+
+        existing.IsDone = isDone;
+        SaveIndex();
+        SyncDailyMarkdownFile(existing.Timestamp.Date);
+    }
+
+    public List<DiaryEntry> GetPendingEntries() =>
+        _entries.Where(e => !e.IsDone).OrderByDescending(e => e.Timestamp).ToList();
 
     public void DeleteEntry(DiaryEntry entry)
     {
@@ -127,7 +141,8 @@ public class DiaryService
         sb.AppendLine();
         foreach (var entry in dayEntries)
         {
-            sb.AppendLine($"- **[{entry.TimeFormatted}]** {entry.Text}");
+            string check = entry.IsDone ? "[x]" : "[ ]";
+            sb.AppendLine($"- {check} **[{entry.TimeFormatted}]** {entry.Text}");
         }
 
         File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);

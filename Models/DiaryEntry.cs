@@ -10,6 +10,7 @@ public class DiaryEntry
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public DateTime Timestamp { get; set; } = DateTime.Now;
     public string Text { get; set; } = string.Empty;
+    public bool IsDone { get; set; } = true;
 
     [JsonIgnore]
     public string DateFormatted => Timestamp.ToString("dd/MM/yyyy");

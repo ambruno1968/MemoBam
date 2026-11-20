@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.1.0] - 2026-11-20
+
+### Aggiunto
+- **Spunta "Fatto" su ogni riga**: aggiunta una casella di spunta (attiva di default) sia nelle schede dell'**Archivio Documenti** sia nelle righe del **Diario Giornaliero** (`- [x]` / `- [ ]` nei file Markdown). Togliendo la spunta, la riga viene evidenziata in ambra per ricordare di completarla.
+- **Alert in alto per elementi non spuntati**: barra di avviso dedicata che mostra il conteggio di documenti e attività da terminare, con elenco espandibile e pulsanti rapidi **Apri** (apre il documento o porta al giorno del diario) e **✓ Fatto**.
+
 ## [1.0.0] - 2026-11-20
 
 ### Aggiunto

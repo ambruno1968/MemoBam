@@ -16,6 +16,7 @@ public class ArchiveItem
     public string Notes { get; set; } = string.Empty;
     public long FileSizeBytes { get; set; }
     public bool IsDirectory { get; set; }
+    public bool IsDone { get; set; } = true;
 
     [JsonIgnore]
     public string DateFormatted => ArchivedAt.ToString("dd/MM/yyyy");
