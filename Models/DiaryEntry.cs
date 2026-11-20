@@ -11,10 +11,20 @@ public class DiaryEntry
     public DateTime Timestamp { get; set; } = DateTime.Now;
     public string Text { get; set; } = string.Empty;
     public bool IsDone { get; set; } = true;
+    public List<DiaryAttachment> Attachments { get; set; } = [];
 
     [JsonIgnore]
     public string DateFormatted => Timestamp.ToString("dd/MM/yyyy");
 
     [JsonIgnore]
     public string TimeFormatted => Timestamp.ToString("HH:mm:ss");
+
+    [JsonIgnore]
+    public bool HasAttachments => Attachments.Count > 0;
+
+    [JsonIgnore]
+    public string RowBackgroundHex { get; set; } = "#EFF6FF";
+
+    [JsonIgnore]
+    public string RowBorderHex { get; set; } = "#BFDBFE";
 }

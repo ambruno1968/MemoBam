@@ -7,12 +7,22 @@ namespace MemoBam.Services;
 
 /// <summary>
 /// Manages the daily work diary in a dedicated "Diario" subfolder under MemoBam,
-/// automatically stamping date/time and syncing human-readable daily Markdown files.
+/// automatically stamping date/time, linking attachments, and syncing daily Markdown files.
 /// </summary>
 public class DiaryService
 {
     private const string DiaryFolderName = "Diario";
+    private const string AttachmentsFolderName = "Allegati";
     private const string IndexFileName = "diario_index.json";
+
+    private static readonly (string Bg, string Border)[] PastelPalette =
+    [
+        ("#EFF6FF", "#BFDBFE"), // Pastel Blue
+        ("#ECFDF5", "#A7F3D0"), // Pastel Mint
+        ("#F5F3FF", "#DDD6FE"), // Pastel Lavender
+        ("#FFF1F2", "#FECDD3"), // Pastel Peach/Rose
+        ("#F0F9FF", "#BAE6FD")  // Pastel Sky
+    ];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -22,6 +32,7 @@ public class DiaryService
     private readonly List<DiaryEntry> _entries = [];
 
     public string DiaryDirectory { get; }
+    private string AttachmentsRootDirectory => Path.Combine(DiaryDirectory, AttachmentsFolderName);
     private string IndexFilePath => Path.Combine(DiaryDirectory, IndexFileName);
 
     public DiaryService(string? baseDirectory = null)
@@ -75,6 +86,74 @@ public class DiaryService
         SyncDailyMarkdownFile(existing.Timestamp.Date);
     }
 
+    public List<DiaryAttachment> AddAttachments(DiaryEntry entry, IEnumerable<string> sourcePaths, bool moveFiles = false)
+    {
+        var existing = _entries.FirstOrDefault(e => e.Id == entry.Id);
+        if (existing is null) return [];
+
+        var added = new List<DiaryAttachment>();
+        var validPaths = sourcePaths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        if (validPaths.Count == 0) return added;
+
+        var dayFolder = Path.Combine(AttachmentsRootDirectory, existing.Timestamp.ToString("yyyy-MM-dd"));
+        Directory.CreateDirectory(dayFolder);
+
+        foreach (var sourcePath in validPaths)
+        {
+            var now = DateTime.Now;
+            bool isDir = Directory.Exists(sourcePath);
+            string originalName = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            string targetPath = GetUniqueTargetPath(dayFolder, originalName, isDir, now);
+
+            if (isDir)
+            {
+                if (moveFiles) MoveDirectory(sourcePath, targetPath);
+                else CopyDirectory(sourcePath, targetPath);
+            }
+            else
+            {
+                if (moveFiles) File.Move(sourcePath, targetPath);
+                else File.Copy(sourcePath, targetPath);
+            }
+
+            var attachment = new DiaryAttachment
+            {
+                FileName = originalName,
+                StoredRelativePath = Path.GetRelativePath(DiaryDirectory, targetPath),
+                AddedAt = now,
+                IsDirectory = isDir
+            };
+
+            existing.Attachments.Add(attachment);
+            added.Add(attachment);
+        }
+
+        if (added.Count > 0)
+        {
+            SaveIndex();
+            SyncDailyMarkdownFile(existing.Timestamp.Date);
+        }
+
+        return added;
+    }
+
+    public void RemoveAttachment(DiaryEntry entry, DiaryAttachment attachment)
+    {
+        var existing = _entries.FirstOrDefault(e => e.Id == entry.Id);
+        if (existing is null) return;
+
+        var target = existing.Attachments.FirstOrDefault(a => a.Id == attachment.Id);
+        if (target is null) return;
+
+        DeletePhysicalAttachment(target);
+        existing.Attachments.Remove(target);
+        SaveIndex();
+        SyncDailyMarkdownFile(existing.Timestamp.Date);
+    }
+
+    public string GetAttachmentFullPath(DiaryAttachment attachment) =>
+        Path.Combine(DiaryDirectory, attachment.StoredRelativePath);
+
     public List<DiaryEntry> GetPendingEntries() =>
         _entries.Where(e => !e.IsDone).OrderByDescending(e => e.Timestamp).ToList();
 
@@ -82,6 +161,11 @@ public class DiaryService
     {
         var existing = _entries.FirstOrDefault(e => e.Id == entry.Id);
         if (existing is null) return;
+
+        foreach (var attachment in existing.Attachments)
+        {
+            DeletePhysicalAttachment(attachment);
+        }
 
         var date = existing.Timestamp.Date;
         _entries.Remove(existing);
@@ -110,11 +194,85 @@ public class DiaryService
                 results = results.Where(e =>
                     e.Text.Contains(term, StringComparison.OrdinalIgnoreCase)
                     || e.DateFormatted.Contains(term, StringComparison.OrdinalIgnoreCase)
-                    || e.TimeFormatted.Contains(term, StringComparison.OrdinalIgnoreCase));
+                    || e.TimeFormatted.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || e.Attachments.Any(a => a.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)));
             }
         }
 
-        return results.OrderByDescending(e => e.Timestamp).ToList();
+        var ordered = results.OrderByDescending(e => e.Timestamp).ToList();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var (bg, border) = PastelPalette[i % PastelPalette.Length];
+            ordered[i].RowBackgroundHex = bg;
+            ordered[i].RowBorderHex = border;
+        }
+
+        return ordered;
+    }
+
+    private void DeletePhysicalAttachment(DiaryAttachment attachment)
+    {
+        var fullPath = GetAttachmentFullPath(attachment);
+        if (attachment.IsDirectory && Directory.Exists(fullPath))
+        {
+            Directory.Delete(fullPath, recursive: true);
+        }
+        else if (!attachment.IsDirectory && File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
+    }
+
+    private static string GetUniqueTargetPath(string targetFolder, string originalName, bool isDir, DateTime timestamp)
+    {
+        string candidate = Path.Combine(targetFolder, originalName);
+        if (!File.Exists(candidate) && !Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        string baseName = isDir ? originalName : Path.GetFileNameWithoutExtension(originalName);
+        string ext = isDir ? string.Empty : Path.GetExtension(originalName);
+        string stamp = timestamp.ToString("yyyyMMdd_HHmmss");
+
+        candidate = Path.Combine(targetFolder, $"{baseName}_{stamp}{ext}");
+        int counter = 1;
+        while (File.Exists(candidate) || Directory.Exists(candidate))
+        {
+            candidate = Path.Combine(targetFolder, $"{baseName}_{stamp}_{counter}{ext}");
+            counter++;
+        }
+
+        return candidate;
+    }
+
+    private static void CopyDirectory(string sourceDir, string destDir)
+    {
+        Directory.CreateDirectory(destDir);
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)));
+        }
+        foreach (var subDir in Directory.GetDirectories(sourceDir))
+        {
+            CopyDirectory(subDir, Path.Combine(destDir, Path.GetFileName(subDir)));
+        }
+    }
+
+    private static void MoveDirectory(string sourceDir, string destDir)
+    {
+        var sourceRoot = Path.GetPathRoot(Path.GetFullPath(sourceDir));
+        var destRoot = Path.GetPathRoot(Path.GetFullPath(destDir));
+
+        if (string.Equals(sourceRoot, destRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            Directory.Move(sourceDir, destDir);
+        }
+        else
+        {
+            CopyDirectory(sourceDir, destDir);
+            Directory.Delete(sourceDir, recursive: true);
+        }
     }
 
     private void SyncDailyMarkdownFile(DateTime date)
@@ -143,6 +301,10 @@ public class DiaryService
         {
             string check = entry.IsDone ? "[x]" : "[ ]";
             sb.AppendLine($"- {check} **[{entry.TimeFormatted}]** {entry.Text}");
+            foreach (var att in entry.Attachments)
+            {
+                sb.AppendLine($"  - Allegato: `{att.FileName}` ({att.StoredRelativePath})");
+            }
         }
 
         File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);

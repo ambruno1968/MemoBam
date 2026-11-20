@@ -1135,16 +1135,21 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="9"
-                                            BorderThickness="1"
-                                            Padding="12,9">
+                                            Background="{Binding RowBackgroundHex}"
+                                            Padding="12,9"
+                                            AllowDrop="True"
+                                            Tag="{Binding}"
+                                            DragOver="DiaryRow_DragOver"
+                                            Drop="DiaryRow_Drop"
+                                            ToolTip="Puoi trascinare file direttamente su questa riga per allegarli">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="White"/>
-                                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                <Setter Property="BorderBrush" Value="{Binding RowBorderHex}"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsDone}" Value="False">
-                                                        <Setter Property="Background" Value="#FFFBEB"/>
                                                         <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -1170,7 +1175,7 @@
                                             </CheckBox>
 
                                             <Border Grid.Column="1"
-                                                    Background="#F1F5F9"
+                                                    Background="#CCFFFFFF"
                                                     CornerRadius="6"
                                                     Padding="8,4"
                                                     VerticalAlignment="Top"
@@ -1183,14 +1188,65 @@
                                                 </TextBlock>
                                             </Border>
 
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Text}"
-                                                       FontSize="13"
-                                                       Foreground="#0F172A"
-                                                       TextWrapping="Wrap"
-                                                       VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Text}"
+                                                           FontSize="13"
+                                                           Foreground="#0F172A"
+                                                           TextWrapping="Wrap"/>
+
+                                                <ItemsControl ItemsSource="{Binding Attachments}"
+                                                              Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}"
+                                                              Margin="0,6,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="White"
+                                                                    BorderBrush="#CBD5E1"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="5"
+                                                                    Padding="6,2"
+                                                                    Margin="0,0,6,4">
+                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <Button Content="{Binding DisplayLabel}"
+                                                                            Click="OpenDiaryAttachmentButton_Click"
+                                                                            Tag="{Binding}"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0"
+                                                                            Foreground="#1D4ED8"
+                                                                            FontSize="11"
+                                                                            FontWeight="SemiBold"
+                                                                            Cursor="Hand"
+                                                                            Padding="0,0,4,0"
+                                                                            ToolTip="Apri allegato"/>
+                                                                    <Button Content="✕"
+                                                                            Click="RemoveDiaryAttachmentButton_Click"
+                                                                            Tag="{Binding}"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0"
+                                                                            Foreground="#94A3B8"
+                                                                            FontSize="10.5"
+                                                                            Cursor="Hand"
+                                                                            Padding="2,0"
+                                                                            ToolTip="Rimuovi allegato"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
 
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <Button Content="📎 Allega"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Background="White"
+                                                        Foreground="#1E293B"
+                                                        Tag="{Binding}"
+                                                        Click="AttachToDiaryEntryButton_Click"
+                                                        ToolTip="Allega uno o più file a questa riga del diario"/>
                                                 <Button Content="Elimina"
                                                         Style="{StaticResource ActionButtonStyle}"
                                                         Background="#FEE2E2"

@@ -610,6 +610,25 @@ public partial class MainWindow : Window
         try
         {
             bool moveFiles = MoveFilesCheckBox.IsChecked == true;
+
+            if (DiaryTabRadio.IsChecked == true)
+            {
+                var targetEntry = DiaryListBox.SelectedItem as DiaryEntry
+                    ?? (DiaryListBox.Items.Count > 0 ? DiaryListBox.Items[0] as DiaryEntry : null);
+
+                if (targetEntry is null)
+                {
+                    string fallbackText = !string.IsNullOrWhiteSpace(CustomTitleTextBox.Text)
+                        ? CustomTitleTextBox.Text.Trim()
+                        : $"Allegati ({string.Join(", ", paths.Select(Path.GetFileName))})";
+                    targetEntry = _diaryService.AddEntry(fallbackText, DiaryDatePicker.SelectedDate ?? DateTime.Today);
+                    CustomTitleTextBox.Clear();
+                }
+
+                AttachFilesToDiaryEntry(targetEntry, paths, moveFiles);
+                return;
+            }
+
             var added = _archiveService.AddPaths(
                 paths,
                 moveFiles,
@@ -972,6 +991,139 @@ public partial class MainWindow : Window
         });
     }
 
+    private void AttachFilesToDiaryEntry(DiaryEntry entry, IEnumerable<string> paths, bool moveFiles)
+    {
+        var added = _diaryService.AddAttachments(entry, paths, moveFiles);
+        if (added.Count == 0)
+        {
+            ShowStatus("Nessun file o cartella valido trovato.", isError: true);
+            return;
+        }
+
+        RefreshDiaryList();
+        ShowStatus(
+            added.Count == 1
+                ? $"Allegato \"{added[0].FileName}\" collegato alla riga del diario."
+                : $"Collegati {added.Count} allegati alla riga del diario.",
+            isError: false);
+    }
+
+    private void DiaryRow_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = MoveFilesCheckBox.IsChecked == true ? DragDropEffects.Move : DragDropEffects.Copy;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void DiaryRow_Drop(object sender, DragEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: DiaryEntry entry } &&
+            e.Data.GetDataPresent(DataFormats.FileDrop) &&
+            e.Data.GetData(DataFormats.FileDrop) is string[] files)
+        {
+            try
+            {
+                AttachFilesToDiaryEntry(entry, files, MoveFilesCheckBox.IsChecked == true);
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Errore allegato diario: {ex.Message}", isError: true);
+            }
+        }
+        e.Handled = true;
+    }
+
+    private void AttachToDiaryEntryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: DiaryEntry entry }) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Seleziona file da allegare alla riga del diario",
+            Multiselect = true
+        };
+
+        _isDialogOpen = true;
+        try
+        {
+            if (dialog.ShowDialog() == true)
+            {
+                AttachFilesToDiaryEntry(entry, dialog.FileNames, MoveFilesCheckBox.IsChecked == true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Errore allegato diario: {ex.Message}", isError: true);
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
+    }
+
+    private void OpenDiaryAttachmentButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: DiaryAttachment attachment }) return;
+
+        var fullPath = _diaryService.GetAttachmentFullPath(attachment);
+        if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
+        {
+            MessageBox.Show($"L'allegato non è più presente nel percorso:\n{fullPath}", "File non trovato", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = fullPath,
+            UseShellExecute = true
+        });
+    }
+
+    private void RemoveDiaryAttachmentButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: DiaryAttachment attachment } btn) return;
+
+        var listBoxItem = FindVisualParent<ListBoxItem>(btn);
+        if (listBoxItem?.DataContext is not DiaryEntry entry) return;
+
+        _isDialogOpen = true;
+        try
+        {
+            var result = MessageBox.Show(
+                $"Vuoi eliminare l'allegato \"{attachment.FileName}\" da questa riga del diario?",
+                "Conferma eliminazione allegato",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _diaryService.RemoveAttachment(entry, attachment);
+                RefreshDiaryList();
+            }
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var current = VisualTreeHelper.GetParent(child);
+        while (current is not null)
+        {
+            if (current is T match) return match;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
+    }
+
     private void DeleteDiaryEntryButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: DiaryEntry entry }) return;
@@ -979,8 +1131,12 @@ public partial class MainWindow : Window
         _isDialogOpen = true;
         try
         {
+            string attachmentNote = entry.Attachments.Count > 0
+                ? $"\n\nVerranno eliminati anche i {entry.Attachments.Count} allegati collegati."
+                : string.Empty;
+
             var result = MessageBox.Show(
-                $"Vuoi eliminare questa registrazione dal diario?\n\n\"{entry.Text}\"",
+                $"Vuoi eliminare questa registrazione dal diario?\n\n\"{entry.Text}\"{attachmentNote}",
                 "Conferma eliminazione",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
