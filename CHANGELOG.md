@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.4.0] - 2026-11-20
+
+### Aggiunto
+- **Filtro allegati Diario in Archivio Documenti**: aggiunta la spunta **`Escludi allegati provenienti dal Diario`** (attiva di default) nella barra di ricerca di **Archivio Documenti**, per scegliere rapidamente se mostrare o nascondere i documenti collegati alle righe del Diario.
+
 ## [1.3.0] - 2026-11-20
 
 ### Aggiunto

@@ -597,37 +597,47 @@ public partial class MainWindow : Window
         DiaryTabContent.Visibility = isDiary ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void ExcludeDiaryAttachmentsCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        RefreshCardsList();
+    }
+
     private void RefreshCardsList()
     {
+        bool excludeDiary = ExcludeDiaryAttachmentsCheckBox.IsChecked == true;
         var archiveAll = _archiveService.GetAllItems();
-        var diaryAll = _diaryService.GetMatchingAttachments(null, null);
-        int totalCount = archiveAll.Count + diaryAll.Count;
+        int diaryCount = excludeDiary ? 0 : _diaryService.GetMatchingAttachments(null, null).Count;
+        int totalCount = archiveAll.Count + diaryCount;
         TotalCountBadge.Text = totalCount == 1 ? "1 scheda" : $"{totalCount} schede";
 
         var filtered = _archiveService.Search(SearchTextBox.Text, FilterDatePicker.SelectedDate);
 
-        foreach (var (entry, att) in _diaryService.GetMatchingAttachments(SearchTextBox.Text, FilterDatePicker.SelectedDate))
+        if (!excludeDiary)
         {
-            string fullPath = _diaryService.GetAttachmentFullPath(att);
-            long sizeBytes = !att.IsDirectory && File.Exists(fullPath) ? new FileInfo(fullPath).Length : 0;
-            string preview = entry.Text.Replace("\r\n", " ").Replace("\n", " ").Trim();
-            if (preview.Length > 80) preview = preview[..80] + "…";
-
-            filtered.Add(new ArchiveItem
+            foreach (var (entry, att) in _diaryService.GetMatchingAttachments(SearchTextBox.Text, FilterDatePicker.SelectedDate))
             {
-                Id = att.Id,
-                Title = att.IsDirectory ? att.FileName : Path.GetFileNameWithoutExtension(att.FileName),
-                OriginalFileName = att.FileName,
-                ArchivedAt = att.AddedAt,
-                FileSizeBytes = sizeBytes,
-                IsDirectory = att.IsDirectory,
-                IsDone = entry.IsDone,
-                IsDiaryAttachment = true,
-                DiarySourceLabel = $"Riga diario ({entry.DateFormatted} {entry.TimeFormatted}): {preview}",
-                DirectFullPath = fullPath,
-                LinkedDiaryEntry = entry,
-                LinkedDiaryAttachment = att
-            });
+                string fullPath = _diaryService.GetAttachmentFullPath(att);
+                long sizeBytes = !att.IsDirectory && File.Exists(fullPath) ? new FileInfo(fullPath).Length : 0;
+                string preview = entry.Text.Replace("\r\n", " ").Replace("\n", " ").Trim();
+                if (preview.Length > 80) preview = preview[..80] + "…";
+
+                filtered.Add(new ArchiveItem
+                {
+                    Id = att.Id,
+                    Title = att.IsDirectory ? att.FileName : Path.GetFileNameWithoutExtension(att.FileName),
+                    OriginalFileName = att.FileName,
+                    ArchivedAt = att.AddedAt,
+                    FileSizeBytes = sizeBytes,
+                    IsDirectory = att.IsDirectory,
+                    IsDone = entry.IsDone,
+                    IsDiaryAttachment = true,
+                    DiarySourceLabel = $"Riga diario ({entry.DateFormatted} {entry.TimeFormatted}): {preview}",
+                    DirectFullPath = fullPath,
+                    LinkedDiaryEntry = entry,
+                    LinkedDiaryAttachment = att
+                });
+            }
         }
 
         filtered = filtered.OrderByDescending(i => i.ArchivedAt).ToList();

@@ -829,63 +829,76 @@
                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
                                 Padding="9">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="6"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="125"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Grid Grid.Column="0">
-                                    <TextBox x:Name="SearchTextBox"
-                                             Padding="9,6"
-                                             FontSize="12.5"
-                                             Background="{DynamicResource InputBgBrush}"
-                                             Foreground="{DynamicResource PrimaryTextBrush}"
-                                             BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                             BorderThickness="1"
-                                             VerticalContentAlignment="Center"
-                                             TextChanged="SearchTextBox_TextChanged"/>
-                                    <TextBlock Text="Cerca titolo, data (20/11/2026) o ora..."
-                                               Foreground="#94A3B8"
-                                               FontSize="12"
-                                               Margin="11,0,8,0"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"
-                                               IsHitTestVisible="False">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Text, ElementName=SearchTextBox}" Value="">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                    <Grid Grid.Column="0">
+                                        <TextBox x:Name="SearchTextBox"
+                                                 Padding="9,6"
+                                                 FontSize="12.5"
+                                                 Background="{DynamicResource InputBgBrush}"
+                                                 Foreground="{DynamicResource PrimaryTextBrush}"
+                                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                                 BorderThickness="1"
+                                                 VerticalContentAlignment="Center"
+                                                 TextChanged="SearchTextBox_TextChanged"/>
+                                        <TextBlock Text="Cerca titolo, data (20/11/2026) o ora..."
+                                                   Foreground="#94A3B8"
+                                                   FontSize="12"
+                                                   Margin="11,0,8,0"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   IsHitTestVisible="False">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Text, ElementName=SearchTextBox}" Value="">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <DatePicker x:Name="FilterDatePicker"
+                                                Grid.Column="2"
+                                                VerticalContentAlignment="Center"
+                                                FontSize="12"
+                                                SelectedDateChanged="FilterDatePicker_SelectedDateChanged"
+                                                ToolTip="Filtra per data specifica"/>
+
+                                    <Button Grid.Column="4"
+                                            Content="Pulisci"
+                                            Click="ClearSearchButton_Click"
+                                            Padding="10,6"
+                                            Background="#E2E8F0"
+                                            Foreground="#334155"
+                                            FontWeight="SemiBold"
+                                            FontSize="11.5"
+                                            BorderThickness="0"
+                                            Cursor="Hand"/>
                                 </Grid>
 
-                                <DatePicker x:Name="FilterDatePicker"
-                                            Grid.Column="2"
-                                            VerticalContentAlignment="Center"
-                                            FontSize="12"
-                                            SelectedDateChanged="FilterDatePicker_SelectedDateChanged"
-                                            ToolTip="Filtra per data specifica"/>
-
-                                <Button Grid.Column="4"
-                                        Content="Pulisci"
-                                        Click="ClearSearchButton_Click"
-                                        Padding="10,6"
-                                        Background="#E2E8F0"
-                                        Foreground="#334155"
-                                        FontWeight="SemiBold"
-                                        FontSize="11.5"
-                                        BorderThickness="0"
-                                        Cursor="Hand"/>
-                            </Grid>
+                                <CheckBox x:Name="ExcludeDiaryAttachmentsCheckBox"
+                                          IsChecked="True"
+                                          Checked="ExcludeDiaryAttachmentsCheckBox_Changed"
+                                          Unchecked="ExcludeDiaryAttachmentsCheckBox_Changed"
+                                          Content="Escludi allegati provenienti dal Diario"
+                                          FontSize="11.5"
+                                          Foreground="{DynamicResource SecondaryTextBrush}"
+                                          Margin="2,7,0,0"
+                                          VerticalContentAlignment="Center"
+                                          ToolTip="Se attivo, nasconde in Archivio Documenti gli allegati collegati alle righe del Diario"/>
+                            </StackPanel>
                         </Border>
 
                         <!-- Results Summary -->
