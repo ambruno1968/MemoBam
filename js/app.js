@@ -243,7 +243,7 @@ const els = {
   filePreviewModal: document.getElementById('filePreviewModal'),
   filePreviewTitle: document.getElementById('filePreviewTitle'),
   filePreviewSubtitle: document.getElementById('filePreviewSubtitle'),
-  previewEditBtn: document.getElementById('previewEditBtn'),
+  previewCategorySelect: document.getElementById('previewCategorySelect'),
   previewOpenSystemBtn: document.getElementById('previewOpenSystemBtn'),
   previewSaveFileBtn: document.getElementById('previewSaveFileBtn'),
   closeFilePreviewTopBtn: document.getElementById('closeFilePreviewTopBtn'),
@@ -1182,7 +1182,7 @@ function closeFilePreview() {
     URL.revokeObjectURL(currentPreview.objectUrl);
   }
   currentPreview = { blob: null, fileName: '', objectUrl: null, ownerType: null, ownerId: null };
-  els.previewEditBtn.classList.add('hidden');
+  els.previewCategorySelect.classList.add('hidden');
 }
 
 function triggerFileDownload(blob, fileName) {
@@ -1207,28 +1207,42 @@ async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = 
 
   let ownerType = null;
   let ownerId = null;
+  let ownerCategoryId = '';
   if (isDiaryAttachment === 'notes') {
     const note = state.notes.find((n) => (n.Attachments || []).some((a) => a.StoredRelativePath === storedRelativePath));
     if (note) {
       ownerType = 'notes';
       ownerId = note.Id;
+      ownerCategoryId = note.CategoryId || '';
     }
   } else if (isDiaryAttachment) {
     const entry = state.diary.find((d) => (d.Attachments || []).some((a) => a.StoredRelativePath === storedRelativePath));
     if (entry) {
       ownerType = 'diary';
       ownerId = entry.Id;
+      ownerCategoryId = entry.CategoryId || '';
     }
   } else {
     const item = state.archive.find((i) => i.StoredRelativePath === storedRelativePath);
     if (item) {
       ownerType = 'archive';
       ownerId = item.Id;
+      ownerCategoryId = item.CategoryId || '';
     }
   }
   currentPreview.ownerType = ownerType;
   currentPreview.ownerId = ownerId;
-  els.previewEditBtn.classList.toggle('hidden', !ownerId);
+  if (ownerType && ownerId) {
+    const scopedCats = state.categories.filter((c) => categoryHasScope(c, ownerType));
+    els.previewCategorySelect.innerHTML = [
+      '<option value="">🏷️ Nessuna categoria</option>',
+      ...scopedCats.map((c) => `<option value="${c.Id}">🏷️ ${escapeHtml(c.Name)}</option>`)
+    ].join('');
+    els.previewCategorySelect.value = scopedCats.some((c) => c.Id === ownerCategoryId) ? ownerCategoryId : '';
+    els.previewCategorySelect.classList.remove('hidden');
+  } else {
+    els.previewCategorySelect.classList.add('hidden');
+  }
 
   const ext = getExtension(fileName);
   els.filePreviewTitle.textContent = `📄 ${fileName || 'Anteprima Documento'}`;
@@ -1558,20 +1572,22 @@ function bindEvents() {
   });
 
   // Document Preview Modal actions
-  els.previewEditBtn.addEventListener('click', () => {
+  els.previewCategorySelect.addEventListener('change', async () => {
     const { ownerType, ownerId } = currentPreview;
     if (!ownerId) return;
-    closeFilePreview();
+    const categoryId = els.previewCategorySelect.value || null;
     if (ownerType === 'archive') {
       const item = state.archive.find((i) => i.Id === ownerId);
-      if (item) openEditArchiveModal(item);
+      if (item) await storage.updateArchiveItem({ ...item, CategoryId: categoryId });
     } else if (ownerType === 'diary') {
       const entry = state.diary.find((d) => d.Id === ownerId);
-      if (entry) openDiaryDetailModal(entry);
+      if (entry) await storage.updateDiaryEntry({ ...entry, CategoryId: categoryId });
     } else if (ownerType === 'notes') {
       const note = state.notes.find((n) => n.Id === ownerId);
-      if (note) openNoteDetailModal(note);
+      if (note) await storage.updateNote({ ...note, CategoryId: categoryId });
     }
+    await reloadData();
+    showToast('Categoria aggiornata');
   });
   els.closeFilePreviewTopBtn.addEventListener('click', closeFilePreview);
   els.filePreviewModal.addEventListener('click', (e) => {

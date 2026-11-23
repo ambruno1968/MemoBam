@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.10.2] - 2026-11-23
+
+### Migliorato
+- **Selezione diretta categoria in anteprima file**: sostituito il pulsante `✏️ Modifica / Categoria` con il menu a tendina diretto della categoria (`#previewCategorySelect`) nella barra superiore di `#filePreviewModal`, con salvataggio immediato al cambio selezione.
+
 ## [1.10.1] - 2026-11-23
 
 ### Risolto
