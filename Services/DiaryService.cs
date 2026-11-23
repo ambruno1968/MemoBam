@@ -14,6 +14,7 @@ public class DiaryService
     private const string DiaryFolderName = "Diario";
     private const string AttachmentsFolderName = "Allegati";
     private const string IndexFileName = "diario_index.json";
+    private const string QuickNotesFileName = "note_pronte.json";
 
     private static readonly (string Bg, string Border)[] PastelPalette =
     [
@@ -41,10 +42,12 @@ public class DiaryService
     };
 
     private readonly List<DiaryEntry> _entries = [];
+    private readonly List<QuickNote> _quickNotes = [];
 
     public string DiaryDirectory { get; }
     private string AttachmentsRootDirectory => Path.Combine(DiaryDirectory, AttachmentsFolderName);
     private string IndexFilePath => Path.Combine(DiaryDirectory, IndexFileName);
+    private string QuickNotesFilePath => Path.Combine(DiaryDirectory, QuickNotesFileName);
 
     public DiaryService(string? baseDirectory = null)
     {
@@ -55,6 +58,7 @@ public class DiaryService
         DiaryDirectory = Path.Combine(root, DiaryFolderName);
         Directory.CreateDirectory(DiaryDirectory);
         LoadIndex();
+        LoadQuickNotes();
     }
 
     public DiaryEntry AddEntry(string text, DateTime? targetDate = null, string? richContentXaml = null)
@@ -394,4 +398,77 @@ public class DiaryService
         File.WriteAllText(tempPath, json);
         File.Move(tempPath, IndexFilePath, overwrite: true);
     }
+
+    #region Quick Notes ("Note Pronte")
+
+    public IReadOnlyList<QuickNote> GetQuickNotes() =>
+        _quickNotes.OrderBy(n => n.CreatedAt).ToList();
+
+    public QuickNote AddQuickNote(string text)
+    {
+        var note = new QuickNote
+        {
+            Text = text.Trim(),
+            CreatedAt = DateTime.Now
+        };
+        _quickNotes.Add(note);
+        SaveQuickNotes();
+        return note;
+    }
+
+    public void UpdateQuickNote(QuickNote updated)
+    {
+        var existing = _quickNotes.FirstOrDefault(n => n.Id == updated.Id);
+        if (existing is null) return;
+        existing.Text = updated.Text.Trim();
+        SaveQuickNotes();
+    }
+
+    public void DeleteQuickNote(QuickNote note)
+    {
+        var existing = _quickNotes.FirstOrDefault(n => n.Id == note.Id);
+        if (existing is null) return;
+        _quickNotes.Remove(existing);
+        SaveQuickNotes();
+    }
+
+    private void LoadQuickNotes()
+    {
+        _quickNotes.Clear();
+        if (!File.Exists(QuickNotesFilePath))
+        {
+            _quickNotes.Add(new QuickNote
+            {
+                Text = "Listino cavi aggiornato",
+                CreatedAt = DateTime.Now
+            });
+            SaveQuickNotes();
+            return;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(QuickNotesFilePath);
+            var loaded = JsonSerializer.Deserialize<List<QuickNote>>(json, JsonOptions);
+            if (loaded is not null)
+            {
+                _quickNotes.AddRange(loaded);
+            }
+        }
+        catch
+        {
+            // Keep empty list if quick notes file is unreadable.
+        }
+    }
+
+    private void SaveQuickNotes()
+    {
+        Directory.CreateDirectory(DiaryDirectory);
+        string tempPath = QuickNotesFilePath + ".tmp";
+        string json = JsonSerializer.Serialize(_quickNotes, JsonOptions);
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, QuickNotesFilePath, overwrite: true);
+    }
+
+    #endregion
 }

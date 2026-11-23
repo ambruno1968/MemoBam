@@ -129,6 +129,7 @@ public partial class MainWindow : Window
 
         RefreshCardsList();
         RefreshDiaryList();
+        RefreshQuickNotesChips();
         Loaded += async (_, _) => await CheckForUpdatesOnStartupAsync();
     }
 
@@ -604,6 +605,53 @@ public partial class MainWindow : Window
         RefreshCardsList();
     }
 
+    private static string CombineQueries(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first)) return second?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(second)) return first.Trim();
+        return $"{first.Trim()} {second.Trim()}";
+    }
+
+    private void GlobalSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        RefreshCardsList();
+        RefreshDiaryList();
+    }
+
+    private void GlobalDatePicker_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        RefreshCardsList();
+        RefreshDiaryList();
+    }
+
+    private void ClearGlobalSearchButton_Click(object sender, RoutedEventArgs e)
+    {
+        GlobalSearchTextBox.Clear();
+        GlobalDatePicker.SelectedDate = null;
+        RefreshCardsList();
+        RefreshDiaryList();
+    }
+
+    private void GlobalArchiveCountButton_Click(object sender, RoutedEventArgs e)
+    {
+        ArchiveTabRadio.IsChecked = true;
+    }
+
+    private void GlobalDiaryCountButton_Click(object sender, RoutedEventArgs e)
+    {
+        DiaryTabRadio.IsChecked = true;
+    }
+
+    private void UpdateGlobalSearchCounts(int archiveCount, int diaryCount)
+    {
+        bool hasGlobalFilter = !string.IsNullOrWhiteSpace(GlobalSearchTextBox.Text) || GlobalDatePicker.SelectedDate.HasValue;
+        GlobalSearchCountsPanel.Visibility = hasGlobalFilter ? Visibility.Visible : Visibility.Collapsed;
+        GlobalArchiveCountButton.Content = $"📁 {archiveCount} Archivio";
+        GlobalDiaryCountButton.Content = $"📓 {diaryCount} Diario";
+    }
+
     private void RefreshCardsList()
     {
         bool excludeDiary = ExcludeDiaryAttachmentsCheckBox.IsChecked == true;
@@ -612,11 +660,14 @@ public partial class MainWindow : Window
         int totalCount = archiveAll.Count + diaryCount;
         TotalCountBadge.Text = totalCount == 1 ? "1 scheda" : $"{totalCount} schede";
 
-        var filtered = _archiveService.Search(SearchTextBox.Text, FilterDatePicker.SelectedDate);
+        string effectiveQuery = CombineQueries(GlobalSearchTextBox.Text, SearchTextBox.Text);
+        DateTime? effectiveDate = FilterDatePicker.SelectedDate ?? GlobalDatePicker.SelectedDate;
+
+        var filtered = _archiveService.Search(effectiveQuery, effectiveDate);
 
         if (!excludeDiary)
         {
-            foreach (var (entry, att) in _diaryService.GetMatchingAttachments(SearchTextBox.Text, FilterDatePicker.SelectedDate))
+            foreach (var (entry, att) in _diaryService.GetMatchingAttachments(effectiveQuery, effectiveDate))
             {
                 string fullPath = _diaryService.GetAttachmentFullPath(att);
                 long sizeBytes = !att.IsDirectory && File.Exists(fullPath) ? new FileInfo(fullPath).Length : 0;
@@ -646,6 +697,7 @@ public partial class MainWindow : Window
 
         ResultsSummaryTextBlock.Text = filtered.Count == 1 ? "1 scheda trovata" : $"{filtered.Count} schede trovate";
         EmptyStateTextBlock.Visibility = filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateGlobalSearchCounts(filtered.Count, DiaryListBox.ItemsSource is ICollection<DiaryEntry> dList ? dList.Count : 0);
         RefreshPendingAlerts();
     }
 
@@ -850,6 +902,7 @@ public partial class MainWindow : Window
 
                 RefreshCardsList();
                 RefreshDiaryList();
+                RefreshQuickNotesChips();
                 ShowStatus($"Percorso aggiornato: {newPath}", isError: false);
             }
         }
@@ -1013,11 +1066,15 @@ public partial class MainWindow : Window
         int todayCount = _diaryService.GetTodayCount();
         DiaryTabLabel.Text = $"📓 Diario Giornaliero ({todayCount})";
 
-        var entries = _diaryService.GetEntries(DiaryDatePicker.SelectedDate, DiarySearchTextBox.Text);
+        string effectiveQuery = CombineQueries(GlobalSearchTextBox.Text, DiarySearchTextBox.Text);
+        bool hasGlobalQuery = !string.IsNullOrWhiteSpace(GlobalSearchTextBox.Text);
+        DateTime? effectiveDate = GlobalDatePicker.SelectedDate ?? (hasGlobalQuery ? null : DiaryDatePicker.SelectedDate);
+
+        var entries = _diaryService.GetEntries(effectiveDate, effectiveQuery);
         DiaryListBox.ItemsSource = entries;
 
-        string dayLabel = DiaryDatePicker.SelectedDate.HasValue
-            ? $"del {DiaryDatePicker.SelectedDate.Value:dd/MM/yyyy}"
+        string dayLabel = effectiveDate.HasValue
+            ? $"del {effectiveDate.Value:dd/MM/yyyy}"
             : "in tutti i giorni";
 
         DiarySummaryTextBlock.Text = entries.Count == 1
@@ -1025,7 +1082,60 @@ public partial class MainWindow : Window
             : $"{entries.Count} attività registrate {dayLabel}";
 
         DiaryEmptyTextBlock.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateGlobalSearchCounts(CardsListBox.ItemsSource is ICollection<ArchiveItem> aList ? aList.Count : 0, entries.Count);
         RefreshPendingAlerts();
+    }
+
+    private void RefreshQuickNotesChips()
+    {
+        QuickNotesChipsControl.ItemsSource = null;
+        QuickNotesChipsControl.ItemsSource = _diaryService.GetQuickNotes();
+    }
+
+    private void InsertTextIntoDiaryEditor(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        string existing = DiaryRichTextHelper.ExtractPlainText(DiaryRichTextBox.Document);
+        if (string.IsNullOrWhiteSpace(existing))
+        {
+            DiaryRichTextBox.Document = DiaryRichTextHelper.LoadDocument(null, text);
+        }
+        else
+        {
+            DiaryRichTextBox.CaretPosition = DiaryRichTextBox.Document.ContentEnd;
+            DiaryRichTextBox.CaretPosition.InsertTextInRun($"\n{text}");
+        }
+        DiaryRichTextBox.Focus();
+    }
+
+    private void QuickNoteChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: QuickNote note })
+        {
+            InsertTextIntoDiaryEditor(note.Text);
+        }
+    }
+
+    private void ManageQuickNotesButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new QuickNotesWindow(_diaryService)
+        {
+            Owner = this
+        };
+
+        _isDialogOpen = true;
+        try
+        {
+            if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.SelectedNoteTextToInsert))
+            {
+                InsertTextIntoDiaryEditor(dialog.SelectedNoteTextToInsert);
+            }
+            RefreshQuickNotesChips();
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
     }
 
     private void AddDiaryEntryButton_Click(object sender, RoutedEventArgs e)
