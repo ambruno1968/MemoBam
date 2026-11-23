@@ -30,9 +30,13 @@ const state = {
   diary: [],
   notes: [],
   quickNotes: [],
+  categories: [],
   activeSection: 'archive',
   globalSearch: '',
   globalDateFilter: '',
+  archiveCategoryFilter: '',
+  diaryCategoryFilter: '',
+  notesCategoryFilter: '',
   excludeDiaryAttachments: localStorage.getItem('memobam_exclude_diary_att') !== 'false',
   diaryDateFilter: getTodayDateStr(),
   pendingExpanded: false,
@@ -40,6 +44,7 @@ const state = {
   noteDraftAttachments: [], // File[]
   editingArchiveId: null,
   editingQuickNoteId: null,
+  editingCategoryId: null,
   detailDiaryId: null,
   detailNoteId: null,
   pendingAttachEntryId: null,
@@ -65,6 +70,7 @@ const els = {
   connectFolderBtn: document.getElementById('connectFolderBtn'),
   connectFolderLabel: document.getElementById('connectFolderLabel'),
   installBtn: document.getElementById('installBtn'),
+  manageCategoriesBtn: document.getElementById('manageCategoriesBtn'),
   themeToggleBtn: document.getElementById('themeToggleBtn'),
   settingsOpenBtn: document.getElementById('settingsOpenBtn'),
   creditsBtn: document.getElementById('creditsBtn'),
@@ -92,6 +98,7 @@ const els = {
   dropPane: document.getElementById('dropPane'),
   customTitleInput: document.getElementById('customTitleInput'),
   customNotesInput: document.getElementById('customNotesInput'),
+  customCategorySelect: document.getElementById('customCategorySelect'),
   dropZone: document.getElementById('dropZone'),
   dropZoneTitle: document.getElementById('dropZoneTitle'),
   browseFilesBtn: document.getElementById('browseFilesBtn'),
@@ -111,12 +118,15 @@ const els = {
   settingsPane: document.getElementById('settingsPane'),
 
   excludeDiaryAttachmentsChk: document.getElementById('excludeDiaryAttachmentsChk'),
+  archiveCategoryFilter: document.getElementById('archiveCategoryFilter'),
   archiveSummaryText: document.getElementById('archiveSummaryText'),
   archiveList: document.getElementById('archiveList'),
 
   diaryDateInput: document.getElementById('diaryDateInput'),
   diaryTodayBtn: document.getElementById('diaryTodayBtn'),
   diaryAllDaysBtn: document.getElementById('diaryAllDaysBtn'),
+  diaryCategoryFilter: document.getElementById('diaryCategoryFilter'),
+  diaryCategorySelect: document.getElementById('diaryCategorySelect'),
   quickNotesToggleBtn: document.getElementById('quickNotesToggleBtn'),
   quickNotesDropdown: document.getElementById('quickNotesDropdown'),
   quickNotesChips: document.getElementById('quickNotesChips'),
@@ -135,6 +145,8 @@ const els = {
   diaryList: document.getElementById('diaryList'),
 
   noteTitleInput: document.getElementById('noteTitleInput'),
+  notesCategoryFilter: document.getElementById('notesCategoryFilter'),
+  noteCategorySelect: document.getElementById('noteCategorySelect'),
   noteFmtBoldBtn: document.getElementById('noteFmtBoldBtn'),
   noteFmtItalicBtn: document.getElementById('noteFmtItalicBtn'),
   noteFmtBulletBtn: document.getElementById('noteFmtBulletBtn'),
@@ -152,6 +164,7 @@ const els = {
   closeEditItemModalBtn: document.getElementById('closeEditItemModalBtn'),
   editItemTitleInput: document.getElementById('editItemTitleInput'),
   editItemNotesInput: document.getElementById('editItemNotesInput'),
+  editItemCategorySelect: document.getElementById('editItemCategorySelect'),
   cancelEditItemBtn: document.getElementById('cancelEditItemBtn'),
   saveEditItemBtn: document.getElementById('saveEditItemBtn'),
 
@@ -159,6 +172,7 @@ const els = {
   closeDiaryDetailModalBtn: document.getElementById('closeDiaryDetailModalBtn'),
   detailTimestampText: document.getElementById('detailTimestampText'),
   detailDoneChk: document.getElementById('detailDoneChk'),
+  detailCategorySelect: document.getElementById('detailCategorySelect'),
   detailBoldBtn: document.getElementById('detailBoldBtn'),
   detailItalicBtn: document.getElementById('detailItalicBtn'),
   detailBulletBtn: document.getElementById('detailBulletBtn'),
@@ -184,6 +198,18 @@ const els = {
   cancelQuickNoteEditBtn: document.getElementById('cancelQuickNoteEditBtn'),
   quickNotesTableBody: document.getElementById('quickNotesTableBody'),
 
+  categoriesModal: document.getElementById('categoriesModal'),
+  closeCategoriesModalBtn: document.getElementById('closeCategoriesModalBtn'),
+  closeCategoriesFooterBtn: document.getElementById('closeCategoriesFooterBtn'),
+  categoryNameInput: document.getElementById('categoryNameInput'),
+  categoryColorInput: document.getElementById('categoryColorInput'),
+  catScopeArchiveChk: document.getElementById('catScopeArchiveChk'),
+  catScopeDiaryChk: document.getElementById('catScopeDiaryChk'),
+  catScopeNotesChk: document.getElementById('catScopeNotesChk'),
+  saveCategoryBtn: document.getElementById('saveCategoryBtn'),
+  cancelCategoryEditBtn: document.getElementById('cancelCategoryEditBtn'),
+  categoriesTableBody: document.getElementById('categoriesTableBody'),
+
   globalSearchPopup: document.getElementById('globalSearchPopup'),
   globalSearchPopupSubtitle: document.getElementById('globalSearchPopupSubtitle'),
   closeGlobalPopupTopBtn: document.getElementById('closeGlobalPopupTopBtn'),
@@ -200,6 +226,7 @@ const els = {
   noteDetailTimestampText: document.getElementById('noteDetailTimestampText'),
   noteDetailTitleInput: document.getElementById('noteDetailTitleInput'),
   noteDetailDoneChk: document.getElementById('noteDetailDoneChk'),
+  noteDetailCategorySelect: document.getElementById('noteDetailCategorySelect'),
   noteDetailBoldBtn: document.getElementById('noteDetailBoldBtn'),
   noteDetailItalicBtn: document.getElementById('noteDetailItalicBtn'),
   noteDetailBulletBtn: document.getElementById('noteDetailBulletBtn'),
@@ -216,6 +243,7 @@ const els = {
   filePreviewModal: document.getElementById('filePreviewModal'),
   filePreviewTitle: document.getElementById('filePreviewTitle'),
   filePreviewSubtitle: document.getElementById('filePreviewSubtitle'),
+  previewEditBtn: document.getElementById('previewEditBtn'),
   previewOpenSystemBtn: document.getElementById('previewOpenSystemBtn'),
   previewSaveFileBtn: document.getElementById('previewSaveFileBtn'),
   closeFilePreviewTopBtn: document.getElementById('closeFilePreviewTopBtn'),
@@ -436,16 +464,18 @@ function initTheme() {
 // ===== DATA LOADING & STORAGE STATUS =====
 
 async function reloadData() {
-  const [archive, diary, notes, quickNotes] = await Promise.all([
+  const [archive, diary, notes, quickNotes, categories] = await Promise.all([
     storage.getArchiveItems(),
     storage.getDiaryEntries(),
     storage.getNotes(),
-    storage.getQuickNotes()
+    storage.getQuickNotes(),
+    storage.getCategories()
   ]);
   state.archive = archive;
   state.diary = diary;
   state.notes = notes;
   state.quickNotes = quickNotes;
+  state.categories = categories;
   updateStorageBadge();
   renderAll();
 }
@@ -495,6 +525,7 @@ function getUnifiedArchive() {
           StoredRelativePath: att.StoredRelativePath,
           ArchivedAt: att.AddedAt || entry.Timestamp,
           Notes: '',
+          CategoryId: entry.CategoryId || null,
           FileSizeBytes: 0,
           IsDirectory: Boolean(att.IsDirectory),
           IsDone: entry.IsDone,
@@ -524,7 +555,80 @@ function matchesTerms(textFields, isoDate, query) {
   });
 }
 
+function getCategoryById(id) {
+  if (!id) return null;
+  return state.categories.find((c) => c.Id === id) || null;
+}
+
+function getCategoryName(id) {
+  return getCategoryById(id)?.Name || '';
+}
+
+function matchesCategoryFilter(itemCategoryId, filterValue) {
+  if (!filterValue) return true;
+  if (filterValue === '__none__') return !getCategoryById(itemCategoryId);
+  return itemCategoryId === filterValue;
+}
+
+function renderCategoryBadge(categoryId) {
+  const cat = getCategoryById(categoryId);
+  if (!cat) return '';
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(cat.Color || '') ? cat.Color : '#3B82F6';
+  return `<span class="category-pill" style="--cat-color:${safeColor}">🏷️ ${escapeHtml(cat.Name)}</span>`;
+}
+
+function getCategoryScopes(cat) {
+  return Array.isArray(cat?.Scopes) && cat.Scopes.length > 0
+    ? cat.Scopes
+    : ['archive', 'diary', 'notes'];
+}
+
+function categoryHasScope(cat, scope) {
+  if (!scope) return true;
+  return getCategoryScopes(cat).includes(scope);
+}
+
+function populateCategorySelects() {
+  document.querySelectorAll('.js-category-select').forEach((sel) => {
+    const scope = sel.dataset.scope || '';
+    const scopedCats = state.categories.filter((c) => categoryHasScope(c, scope));
+    const prev = sel.value;
+    sel.innerHTML = [
+      '<option value="">Nessuna categoria</option>',
+      ...scopedCats.map((c) => `<option value="${c.Id}">${escapeHtml(c.Name)}</option>`)
+    ].join('');
+    if (prev && scopedCats.some((c) => c.Id === prev)) {
+      sel.value = prev;
+    } else {
+      sel.value = '';
+    }
+  });
+
+  const filterBindings = [
+    [els.archiveCategoryFilter, 'archiveCategoryFilter', 'archive'],
+    [els.diaryCategoryFilter, 'diaryCategoryFilter', 'diary'],
+    [els.notesCategoryFilter, 'notesCategoryFilter', 'notes']
+  ];
+  for (const [sel, stateKey, scope] of filterBindings) {
+    if (!sel) continue;
+    const scopedCats = state.categories.filter((c) => categoryHasScope(c, scope));
+    sel.innerHTML = [
+      '<option value="">🏷️ Tutte le categorie</option>',
+      '<option value="__none__">Senza categoria</option>',
+      ...scopedCats.map((c) => `<option value="${c.Id}">🏷️ ${escapeHtml(c.Name)}</option>`)
+    ].join('');
+    const current = state[stateKey];
+    if (current === '__none__' || scopedCats.some((c) => c.Id === current)) {
+      sel.value = current;
+    } else {
+      state[stateKey] = '';
+      sel.value = '';
+    }
+  }
+}
+
 function renderAll() {
+  populateCategorySelects();
   renderPending();
   renderArchive();
   renderDiary();
@@ -618,7 +722,8 @@ function getFilteredArchiveItems() {
 
   return getUnifiedArchive().filter((i) => {
     if (effectiveDate && (i.ArchivedAt || '').slice(0, 10) !== effectiveDate) return false;
-    return matchesTerms([i.Title, i.OriginalFileName, i.Notes, i._diarySourceLabel], i.ArchivedAt, effectiveQuery);
+    if (!matchesCategoryFilter(i.CategoryId, state.archiveCategoryFilter)) return false;
+    return matchesTerms([i.Title, i.OriginalFileName, i.Notes, i._diarySourceLabel, getCategoryName(i.CategoryId)], i.ArchivedAt, effectiveQuery);
   });
 }
 
@@ -628,8 +733,9 @@ function getFilteredDiaryEntries(ignoreDayFilterWhenGlobal = true) {
 
   return state.diary.filter((e) => {
     if (effectiveDate && (e.Timestamp || '').slice(0, 10) !== effectiveDate) return false;
+    if (!matchesCategoryFilter(e.CategoryId, state.diaryCategoryFilter)) return false;
     return matchesTerms(
-      [e.Text, ...(e.Attachments || []).map((a) => a.FileName)],
+      [e.Text, getCategoryName(e.CategoryId), ...(e.Attachments || []).map((a) => a.FileName)],
       e.Timestamp,
       effectiveQuery
     );
@@ -643,8 +749,9 @@ function getFilteredNotes() {
   return state.notes.filter((n) => {
     const stamp = n.CreatedAt || n.UpdatedAt || '';
     if (effectiveDate && stamp.slice(0, 10) !== effectiveDate) return false;
+    if (!matchesCategoryFilter(n.CategoryId, state.notesCategoryFilter)) return false;
     return matchesTerms(
-      [n.Title, n.Text, ...(n.Attachments || []).map((a) => a.FileName)],
+      [n.Title, n.Text, getCategoryName(n.CategoryId), ...(n.Attachments || []).map((a) => a.FileName)],
       stamp,
       effectiveQuery
     );
@@ -676,7 +783,7 @@ function renderGlobalSearchPopup(openIfActive = false) {
     : archiveResults
       .map((item) => `
         <button type="button" class="parallel-row js-popup-archive-row ${item.IsDone ? '' : 'pending-highlight'}" data-id="${item.Id}">
-          <div class="parallel-row-title">${item._isDiaryAttachment ? '📓 ' : '📄 '}${escapeHtml(item.Title || item.OriginalFileName)}</div>
+          <div class="parallel-row-title">${item._isDiaryAttachment ? '📓 ' : '📄 '}${escapeHtml(item.Title || item.OriginalFileName)} ${renderCategoryBadge(item.CategoryId)}</div>
           <div class="parallel-row-meta">📅 ${formatDateIt(item.ArchivedAt)} 🕒 ${formatTimeIt(item.ArchivedAt)} • ${escapeHtml(item.OriginalFileName)}</div>
           ${item.Notes ? `<div class="parallel-row-sub">${escapeHtml(item.Notes)}</div>` : ''}
         </button>`)
@@ -687,7 +794,7 @@ function renderGlobalSearchPopup(openIfActive = false) {
     : diaryResults
       .map((entry) => `
         <button type="button" class="parallel-row js-popup-diary-row ${entry.IsDone ? '' : 'pending-highlight'}" data-id="${entry.Id}">
-          <div class="parallel-row-title">${escapeHtml(entry.Text)}</div>
+          <div class="parallel-row-title">${escapeHtml(entry.Text)} ${renderCategoryBadge(entry.CategoryId)}</div>
           <div class="parallel-row-meta">📅 ${formatDateIt(entry.Timestamp)} 🕒 ${formatTimeIt(entry.Timestamp)}${(entry.Attachments || []).length ? ` • 📎 ${entry.Attachments.length} allegati` : ''}</div>
         </button>`)
       .join('');
@@ -697,7 +804,7 @@ function renderGlobalSearchPopup(openIfActive = false) {
     : notesResults
       .map((note) => `
         <button type="button" class="parallel-row js-popup-notes-row ${note.IsDone ? '' : 'pending-highlight'}" data-id="${note.Id}">
-          <div class="parallel-row-title">${escapeHtml(note.Title || note.Text)}</div>
+          <div class="parallel-row-title">${escapeHtml(note.Title || note.Text)} ${renderCategoryBadge(note.CategoryId)}</div>
           <div class="parallel-row-meta">📅 ${formatDateIt(note.CreatedAt)} 🕒 ${formatTimeIt(note.CreatedAt)}${(note.Attachments || []).length ? ` • 📎 ${note.Attachments.length} allegati` : ''}</div>
           ${note.Title && note.Text ? `<div class="parallel-row-sub">${escapeHtml(note.Text)}</div>` : ''}
         </button>`)
@@ -739,6 +846,7 @@ function renderArchive() {
         <div class="card-main">
           <div class="card-title-row">
             ${item._isDiaryAttachment ? `<span class="diary-source-pill">📓 Diario</span>` : ''}
+            ${renderCategoryBadge(item.CategoryId)}
             <span class="card-title">${escapeHtml(item.Title || item.OriginalFileName)}</span>
           </div>
           ${item._isDiaryAttachment ? `<div class="diary-source-label">${escapeHtml(item._diarySourceLabel)}</div>` : ''}
@@ -808,6 +916,7 @@ function renderDiary() {
           ${entry.IsDone ? 'checked' : ''} title="Fatto (togli la spunta per ricordarti di terminarlo)">
         <span class="diary-date-pill">📅 ${formatDateIt(entry.Timestamp)} &nbsp;🕒 ${formatTimeIt(entry.Timestamp)}</span>
         <div class="card-main">
+          ${entry.CategoryId && getCategoryById(entry.CategoryId) ? `<div class="card-title-row">${renderCategoryBadge(entry.CategoryId)}</div>` : ''}
           <div class="diary-text">${renderDiaryBodyHtml(entry)}</div>
           ${attachmentsHtml ? `<div class="attach-chips">${attachmentsHtml}</div>` : ''}
         </div>
@@ -859,7 +968,10 @@ function renderNotes() {
           ${note.IsDone ? 'checked' : ''} title="Fatto (togli la spunta per ricordarti di terminarlo)">
         <span class="diary-date-pill">📅 ${formatDateIt(note.CreatedAt)} &nbsp;🕒 ${formatTimeIt(note.CreatedAt)}</span>
         <div class="card-main">
-          ${note.Title ? `<div class="card-title">${escapeHtml(note.Title)}</div>` : ''}
+          <div class="card-title-row">
+            ${renderCategoryBadge(note.CategoryId)}
+            ${note.Title ? `<div class="card-title">${escapeHtml(note.Title)}</div>` : ''}
+          </div>
           <div class="diary-text">${renderDiaryBodyHtml(note, 'notes')}</div>
           ${attachmentsHtml ? `<div class="attach-chips">${attachmentsHtml}</div>` : ''}
         </div>
@@ -955,6 +1067,55 @@ function resetQuickNoteEditMode() {
   els.cancelQuickNoteEditBtn.classList.add('hidden');
 }
 
+function renderCategoriesTable() {
+  if (!state.categories || state.categories.length === 0) {
+    els.categoriesTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:18px">Nessuna categoria creata. Aggiungine una qui sopra.</td></tr>`;
+    return;
+  }
+  const scopeLabels = {
+    archive: '📁 Archivio',
+    diary: '📓 Diario',
+    notes: '📝 Post-IT'
+  };
+  els.categoriesTableBody.innerHTML = state.categories
+    .map((cat) => {
+      const safeColor = /^#[0-9a-fA-F]{6}$/.test(cat.Color || '') ? cat.Color : '#3B82F6';
+      const scopesHtml = getCategoryScopes(cat)
+        .map((s) => `<span class="category-scope-chip">${scopeLabels[s] || s}</span>`)
+        .join('');
+      return `
+      <tr>
+        <td><span class="category-pill" style="--cat-color:${safeColor}">🏷️ ${escapeHtml(cat.Name)}</span></td>
+        <td><div class="category-scope-chips">${scopesHtml}</div></td>
+        <td class="col-actions">
+          <div class="table-actions-cell">
+            <button class="btn btn-xs btn-neutral js-cat-edit" data-id="${cat.Id}" type="button">✏️ Modifica</button>
+            <button class="btn btn-xs btn-danger-soft js-cat-delete" data-id="${cat.Id}" type="button">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
+function resetCategoryEditMode() {
+  state.editingCategoryId = null;
+  els.categoryNameInput.value = '';
+  els.categoryColorInput.value = '#3B82F6';
+  els.catScopeArchiveChk.checked = true;
+  els.catScopeDiaryChk.checked = true;
+  els.catScopeNotesChk.checked = true;
+  els.saveCategoryBtn.textContent = '➕ Aggiungi';
+  els.cancelCategoryEditBtn.classList.add('hidden');
+}
+
+function openCategoriesModal() {
+  resetCategoryEditMode();
+  renderCategoriesTable();
+  els.categoriesModal.classList.remove('hidden');
+  els.categoryNameInput.focus();
+}
+
 // ===== ACTIONS =====
 
 async function handleDroppedOrSelectedFiles(fileList) {
@@ -985,12 +1146,14 @@ async function handleDroppedOrSelectedFiles(fileList) {
     const added = await storage.addArchiveFiles(
       files,
       els.customTitleInput.value,
-      els.customNotesInput.value
+      els.customNotesInput.value,
+      els.customCategorySelect.value || null
     );
     if (added.length === 0) return;
 
     els.customTitleInput.value = '';
     els.customNotesInput.value = '';
+    els.customCategorySelect.value = '';
     await reloadData();
 
     if (added.length === 1) {
@@ -1007,7 +1170,9 @@ async function handleDroppedOrSelectedFiles(fileList) {
 let currentPreview = {
   blob: null,
   fileName: '',
-  objectUrl: null
+  objectUrl: null,
+  ownerType: null,
+  ownerId: null
 };
 
 function closeFilePreview() {
@@ -1016,7 +1181,8 @@ function closeFilePreview() {
   if (currentPreview.objectUrl) {
     URL.revokeObjectURL(currentPreview.objectUrl);
   }
-  currentPreview = { blob: null, fileName: '', objectUrl: null };
+  currentPreview = { blob: null, fileName: '', objectUrl: null, ownerType: null, ownerId: null };
+  els.previewEditBtn.classList.add('hidden');
 }
 
 function triggerFileDownload(blob, fileName) {
@@ -1038,6 +1204,31 @@ async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = 
   if (currentPreview.objectUrl) {
     URL.revokeObjectURL(currentPreview.objectUrl);
   }
+
+  let ownerType = null;
+  let ownerId = null;
+  if (isDiaryAttachment === 'notes') {
+    const note = state.notes.find((n) => (n.Attachments || []).some((a) => a.StoredRelativePath === storedRelativePath));
+    if (note) {
+      ownerType = 'notes';
+      ownerId = note.Id;
+    }
+  } else if (isDiaryAttachment) {
+    const entry = state.diary.find((d) => (d.Attachments || []).some((a) => a.StoredRelativePath === storedRelativePath));
+    if (entry) {
+      ownerType = 'diary';
+      ownerId = entry.Id;
+    }
+  } else {
+    const item = state.archive.find((i) => i.StoredRelativePath === storedRelativePath);
+    if (item) {
+      ownerType = 'archive';
+      ownerId = item.Id;
+    }
+  }
+  currentPreview.ownerType = ownerType;
+  currentPreview.ownerId = ownerId;
+  els.previewEditBtn.classList.toggle('hidden', !ownerId);
 
   const ext = getExtension(fileName);
   els.filePreviewTitle.textContent = `📄 ${fileName || 'Anteprima Documento'}`;
@@ -1063,6 +1254,7 @@ function openEditArchiveModal(item) {
   state.editingArchiveId = item.Id;
   els.editItemTitleInput.value = item.Title || '';
   els.editItemNotesInput.value = item.Notes || '';
+  els.editItemCategorySelect.value = item.CategoryId || '';
   els.editItemModal.classList.remove('hidden');
   els.editItemTitleInput.focus();
 }
@@ -1107,6 +1299,7 @@ function openDiaryDetailModal(entry) {
   state.detailDiaryId = entry.Id;
   els.detailTimestampText.textContent = `📅 ${formatDateIt(entry.Timestamp)}   🕒 ${formatTimeIt(entry.Timestamp)}`;
   els.detailDoneChk.checked = Boolean(entry.IsDone);
+  els.detailCategorySelect.value = entry.CategoryId || '';
   els.detailEditor.innerHTML = renderDiaryBodyHtml(entry, 'diary');
   renderDetailAttachments(entry);
   els.diaryDetailModal.classList.remove('hidden');
@@ -1118,6 +1311,7 @@ function openNoteDetailModal(note) {
   els.noteDetailTimestampText.textContent = `📅 ${formatDateIt(note.CreatedAt)}   🕒 ${formatTimeIt(note.CreatedAt)}`;
   els.noteDetailTitleInput.value = note.Title || '';
   els.noteDetailDoneChk.checked = Boolean(note.IsDone);
+  els.noteDetailCategorySelect.value = note.CategoryId || '';
   els.noteDetailEditor.innerHTML = renderDiaryBodyHtml(note, 'notes');
   renderNoteDetailAttachments(note);
   els.noteDetailModal.classList.remove('hidden');
@@ -1203,6 +1397,14 @@ async function renderSettingsPanels() {
         <button class="btn btn-neutral btn-sm js-export-archive" type="button">📤 archivio_memobam.json</button>
         <button class="btn btn-neutral btn-sm js-export-diary" type="button">📤 diario_index.json</button>
         <button class="btn btn-neutral btn-sm js-export-all" type="button">💾 Backup Completo</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>🏷️ Categorie Manuali</h4>
+      <p>Crea e modifica le categorie per organizzare documenti, diario e Post-IT.</p>
+      <div class="settings-actions">
+        <button class="btn btn-primary btn-sm js-manage-categories" type="button">🏷️ Gestisci Categorie</button>
       </div>
     </div>
 
@@ -1310,6 +1512,7 @@ function bindEvents() {
       if (!els.topbarMenuDropdown.classList.contains('hidden')) els.topbarMenuDropdown.classList.add('hidden');
       else if (!els.quickNotesDropdown.classList.contains('hidden')) els.quickNotesDropdown.classList.add('hidden');
       else if (!els.filePreviewModal.classList.contains('hidden')) closeFilePreview();
+      else if (!els.categoriesModal.classList.contains('hidden')) els.categoriesModal.classList.add('hidden');
       else if (!els.diaryDetailModal.classList.contains('hidden')) els.diaryDetailModal.classList.add('hidden');
       else if (!els.noteDetailModal.classList.contains('hidden')) els.noteDetailModal.classList.add('hidden');
       else if (!els.creditsModal.classList.contains('hidden')) els.creditsModal.classList.add('hidden');
@@ -1355,6 +1558,21 @@ function bindEvents() {
   });
 
   // Document Preview Modal actions
+  els.previewEditBtn.addEventListener('click', () => {
+    const { ownerType, ownerId } = currentPreview;
+    if (!ownerId) return;
+    closeFilePreview();
+    if (ownerType === 'archive') {
+      const item = state.archive.find((i) => i.Id === ownerId);
+      if (item) openEditArchiveModal(item);
+    } else if (ownerType === 'diary') {
+      const entry = state.diary.find((d) => d.Id === ownerId);
+      if (entry) openDiaryDetailModal(entry);
+    } else if (ownerType === 'notes') {
+      const note = state.notes.find((n) => n.Id === ownerId);
+      if (note) openNoteDetailModal(note);
+    }
+  });
   els.closeFilePreviewTopBtn.addEventListener('click', closeFilePreview);
   els.filePreviewModal.addEventListener('click', (e) => {
     if (e.target === els.filePreviewModal) closeFilePreview();
@@ -1452,6 +1670,64 @@ function bindEvents() {
     renderQuickNotesTable();
   });
 
+  // Categories management modal & filters
+  els.manageCategoriesBtn.addEventListener('click', openCategoriesModal);
+  els.closeCategoriesModalBtn.addEventListener('click', () => els.categoriesModal.classList.add('hidden'));
+  els.closeCategoriesFooterBtn.addEventListener('click', () => els.categoriesModal.classList.add('hidden'));
+  els.cancelCategoryEditBtn.addEventListener('click', resetCategoryEditMode);
+  els.saveCategoryBtn.addEventListener('click', async () => {
+    const name = els.categoryNameInput.value.trim();
+    const color = els.categoryColorInput.value || '#3B82F6';
+    const scopes = [];
+    if (els.catScopeArchiveChk.checked) scopes.push('archive');
+    if (els.catScopeDiaryChk.checked) scopes.push('diary');
+    if (els.catScopeNotesChk.checked) scopes.push('notes');
+
+    if (!name) {
+      showToast('Inserisci il nome della categoria.');
+      els.categoryNameInput.focus();
+      return;
+    }
+    if (scopes.length === 0) {
+      showToast('Seleziona almeno una funzione (Archivio, Diario o Post-IT).');
+      return;
+    }
+    try {
+      if (state.editingCategoryId) {
+        await storage.updateCategory(state.editingCategoryId, name, color, scopes);
+        resetCategoryEditMode();
+        showToast('Categoria aggiornata');
+      } else {
+        await storage.addCategory(name, color, scopes);
+        els.categoryNameInput.value = '';
+        showToast('Categoria creata');
+      }
+      await reloadData();
+      renderCategoriesTable();
+    } catch (err) {
+      showToast(err?.message || 'Errore salvataggio categoria');
+    }
+  });
+  els.categoryNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      els.saveCategoryBtn.click();
+    }
+  });
+
+  els.archiveCategoryFilter.addEventListener('change', () => {
+    state.archiveCategoryFilter = els.archiveCategoryFilter.value;
+    renderArchive();
+  });
+  els.diaryCategoryFilter.addEventListener('change', () => {
+    state.diaryCategoryFilter = els.diaryCategoryFilter.value;
+    renderDiary();
+  });
+  els.notesCategoryFilter.addEventListener('change', () => {
+    state.notesCategoryFilter = els.notesCategoryFilter.value;
+    renderNotes();
+  });
+
   // Drop zone
   els.browseFilesBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1519,8 +1795,9 @@ function bindEvents() {
       text = `Allegati (${state.noteDraftAttachments.map((f) => f.name).join(', ')})`;
     }
     const richHtml = serializeEditorHtml(els.noteEditor);
+    const categoryId = els.noteCategorySelect.value || null;
     try {
-      const note = await storage.addNote(title, text, richHtml || null);
+      const note = await storage.addNote(title, text, richHtml || null, categoryId);
       if (state.noteDraftAttachments.length > 0) {
         await storage.addNoteAttachments(note.Id, state.noteDraftAttachments);
         state.noteDraftAttachments = [];
@@ -1528,6 +1805,7 @@ function bindEvents() {
       }
       els.noteTitleInput.value = '';
       els.noteEditor.innerHTML = '';
+      els.noteCategorySelect.value = '';
       await reloadData();
       showStatus(`Post-IT salvato (${formatDateIt(note.CreatedAt)} ${formatTimeIt(note.CreatedAt)})`);
     } catch (err) {
@@ -1572,6 +1850,7 @@ function bindEvents() {
       Title: title,
       Text: text,
       RichContentHtml: serializeEditorHtml(els.noteDetailEditor),
+      CategoryId: els.noteDetailCategorySelect.value || null,
       IsDone: els.noteDetailDoneChk.checked
     });
     els.noteDetailModal.classList.add('hidden');
@@ -1661,11 +1940,13 @@ function bindEvents() {
     }
 
     const richHtml = serializeEditorHtml(els.diaryEditor);
+    const categoryId = els.diaryCategorySelect.value || null;
     try {
       const entry = await storage.addDiaryEntry(
         text,
         state.diaryDateFilter || getTodayDateStr(),
-        richHtml || null
+        richHtml || null,
+        categoryId
       );
       if (state.draftAttachments.length > 0) {
         await storage.addDiaryAttachments(entry.Id, state.draftAttachments);
@@ -1673,6 +1954,7 @@ function bindEvents() {
         renderDraftAttachments();
       }
       els.diaryEditor.innerHTML = '';
+      els.diaryCategorySelect.value = '';
       await reloadData();
       showStatus(`Diario registrato (${formatDateIt(entry.Timestamp)} ${formatTimeIt(entry.Timestamp)})`);
     } catch (err) {
@@ -1732,7 +2014,8 @@ function bindEvents() {
     await storage.updateArchiveItem({
       ...existing,
       Title: title,
-      Notes: els.editItemNotesInput.value.trim()
+      Notes: els.editItemNotesInput.value.trim(),
+      CategoryId: els.editItemCategorySelect.value || null
     });
     els.editItemModal.classList.add('hidden');
     await reloadData();
@@ -1770,6 +2053,7 @@ function bindEvents() {
       ...existing,
       Text: text,
       RichContentHtml: serializeEditorHtml(els.detailEditor),
+      CategoryId: els.detailCategorySelect.value || null,
       IsDone: els.detailDoneChk.checked
     });
     els.diaryDetailModal.classList.add('hidden');
@@ -1916,6 +2200,42 @@ function bindEvents() {
       return;
     }
 
+    // Categories table & settings actions
+    if (target.closest('.js-manage-categories')) {
+      els.settingsModal.classList.add('hidden');
+      openCategoriesModal();
+      return;
+    }
+    if (target.closest('.js-cat-edit')) {
+      const id = target.closest('.js-cat-edit').dataset.id;
+      const cat = state.categories.find((c) => c.Id === id);
+      if (cat) {
+        const scopes = getCategoryScopes(cat);
+        state.editingCategoryId = cat.Id;
+        els.categoryNameInput.value = cat.Name;
+        els.categoryColorInput.value = /^#[0-9a-fA-F]{6}$/.test(cat.Color || '') ? cat.Color : '#3B82F6';
+        els.catScopeArchiveChk.checked = scopes.includes('archive');
+        els.catScopeDiaryChk.checked = scopes.includes('diary');
+        els.catScopeNotesChk.checked = scopes.includes('notes');
+        els.saveCategoryBtn.textContent = '💾 Salva';
+        els.cancelCategoryEditBtn.classList.remove('hidden');
+        els.categoryNameInput.focus();
+      }
+      return;
+    }
+    if (target.closest('.js-cat-delete')) {
+      const id = target.closest('.js-cat-delete').dataset.id;
+      const cat = state.categories.find((c) => c.Id === id);
+      if (cat && confirm(`Vuoi eliminare la categoria "${cat.Name}"?`)) {
+        if (state.editingCategoryId === id) resetCategoryEditMode();
+        await storage.deleteCategory(id);
+        await reloadData();
+        renderCategoriesTable();
+        showToast('Categoria eliminata');
+      }
+      return;
+    }
+
     // Quick Notes chips & table actions
     if (target.closest('.js-quick-note-chip')) {
       const id = target.closest('.js-quick-note-chip').dataset.id;
@@ -2019,6 +2339,13 @@ function bindEvents() {
       }
       return;
     }
+    if (target.closest('.js-note-row') && !target.closest('.done-checkbox, .diary-inline-check, .card-actions, .attach-chip')) {
+      if (window.getSelection()?.toString()) return;
+      const id = target.closest('.js-note-row').dataset.id;
+      const note = state.notes.find((n) => n.Id === id);
+      if (note) openNoteDetailModal(note);
+      return;
+    }
 
     // Diary card actions
     if (target.closest('.js-diary-open')) {
@@ -2062,7 +2389,7 @@ function bindEvents() {
       }
       return;
     }
-    if (target.closest('.js-diary-row') && !target.closest('.done-checkbox, .card-actions, .attach-chip')) {
+    if (target.closest('.js-diary-row') && !target.closest('.done-checkbox, .diary-inline-check, .card-actions, .attach-chip')) {
       if (window.getSelection()?.toString()) return;
       const id = target.closest('.js-diary-row').dataset.id;
       const entry = state.diary.find((d) => d.Id === id);
@@ -2103,7 +2430,9 @@ function bindEvents() {
     } else if (target.closest('.js-export-all')) {
       downloadJsonFile(`memobam_backup_${getTodayDateStr()}.json`, {
         archive: state.archive,
-        diary: state.diary
+        diary: state.diary,
+        notes: state.notes,
+        categories: state.categories
       });
     } else if (target.closest('.js-clear-cache')) {
       if (confirm('Svuotare i dati e i file salvati in cache su questo dispositivo?')) {

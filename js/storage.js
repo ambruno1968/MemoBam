@@ -7,7 +7,7 @@
 // 3. JSON Import & Export (archivio_memobam.json, diario_index.json, or combined backup)
 
 const DB_NAME = 'memobam_pwa_db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const LEGACY_RO_DB_NAME = 'memobam_pwa_readonly_db';
 const ARCHIVE_INDEX_FILE = 'archivio_memobam.json';
 const DIARY_DIR = 'Diario';
@@ -16,6 +16,7 @@ const ATTACHMENTS_DIR = 'Allegati';
 const DIARY_INDEX_FILE = 'diario_index.json';
 const NOTES_INDEX_FILE = 'appunti_index.json';
 const QUICK_NOTES_FILE = 'note_pronte.json';
+const CATEGORIES_FILE = 'categorie.json';
 
 function generateId() {
   if (crypto?.randomUUID) {
@@ -89,6 +90,7 @@ function openDb() {
       if (!db.objectStoreNames.contains('diary')) db.createObjectStore('diary', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('quickNotes')) db.createObjectStore('quickNotes', { keyPath: 'Id' });
+      if (!db.objectStoreNames.contains('categories')) db.createObjectStore('categories', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'path' });
       if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
     };
@@ -392,7 +394,7 @@ export class MemoBamStorage {
     }
   }
 
-  async addArchiveFiles(files, customTitle = '', notes = '') {
+  async addArchiveFiles(files, customTitle = '', notes = '', categoryId = null) {
     const validFiles = Array.from(files || []).filter(Boolean);
     if (validFiles.length === 0) return [];
 
@@ -439,6 +441,7 @@ export class MemoBamStorage {
         StoredRelativePath: storedRelativePath,
         ArchivedAt: toLocalIsoString(now),
         Notes: (notes || '').trim(),
+        CategoryId: categoryId || null,
         FileSizeBytes: file.size || 0,
         IsDirectory: false,
         IsDone: true
@@ -465,6 +468,7 @@ export class MemoBamStorage {
       if (!target) return;
       target.Title = (updated.Title || '').trim();
       target.Notes = (updated.Notes || '').trim();
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       await this._saveArchiveList(items);
     } else {
@@ -472,6 +476,7 @@ export class MemoBamStorage {
       if (!target) return;
       target.Title = (updated.Title || '').trim();
       target.Notes = (updated.Notes || '').trim();
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       await idbTx(this.db, 'archive', 'readwrite', (s) => s.put(target));
     }
@@ -568,7 +573,7 @@ export class MemoBamStorage {
     await this._writeTextFile(diaryDir, mdFileName, lines.join('\n') + '\n');
   }
 
-  async addDiaryEntry(text, targetDateStr = null, richContentHtml = null) {
+  async addDiaryEntry(text, targetDateStr = null, richContentHtml = null, categoryId = null) {
     const now = new Date();
     let stamp = now;
     if (targetDateStr) {
@@ -587,6 +592,7 @@ export class MemoBamStorage {
       Text: (text || '').trim(),
       RichContentXaml: null,
       RichContentHtml: richContentHtml || null,
+      CategoryId: categoryId || null,
       IsDone: true,
       Attachments: []
     };
@@ -609,6 +615,7 @@ export class MemoBamStorage {
       if (!target) return;
       target.Text = (updated.Text || '').trim();
       if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       await this._saveDiaryListAndMarkdown(entries, new Date(target.Timestamp));
     } else {
@@ -616,6 +623,7 @@ export class MemoBamStorage {
       if (!target) return;
       target.Text = (updated.Text || '').trim();
       if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       await idbTx(this.db, 'diary', 'readwrite', (s) => s.put(target));
     }
@@ -862,7 +870,7 @@ export class MemoBamStorage {
     await this._writeTextFile(notesDir, NOTES_INDEX_FILE, JSON.stringify(notes, null, 2));
   }
 
-  async addNote(title, text, richContentHtml = null) {
+  async addNote(title, text, richContentHtml = null, categoryId = null) {
     const now = toLocalIsoString(new Date());
     const cleanText = (text || '').trim();
     const fallbackTitle = cleanText.split(/\r?\n/)[0]?.slice(0, 60) || 'Appunto';
@@ -871,6 +879,7 @@ export class MemoBamStorage {
       Title: (title || '').trim() || fallbackTitle,
       Text: cleanText,
       RichContentHtml: richContentHtml || null,
+      CategoryId: categoryId || null,
       CreatedAt: now,
       UpdatedAt: now,
       IsDone: true,
@@ -896,6 +905,7 @@ export class MemoBamStorage {
       target.Title = (updated.Title || '').trim() || target.Title;
       target.Text = (updated.Text || '').trim();
       if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       target.UpdatedAt = now;
       await this._saveNotesList(notes);
@@ -905,6 +915,7 @@ export class MemoBamStorage {
       target.Title = (updated.Title || '').trim() || target.Title;
       target.Text = (updated.Text || '').trim();
       if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      if ('CategoryId' in updated) target.CategoryId = updated.CategoryId || null;
       target.IsDone = Boolean(updated.IsDone);
       target.UpdatedAt = now;
       await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(target));
@@ -1085,6 +1096,78 @@ export class MemoBamStorage {
     return null;
   }
 
+  // ===== CATEGORIES ("Categorie") CRUD =====
+
+  async getCategories() {
+    let cats = [];
+    if (this.dirHandle) {
+      cats = await this._readJsonFile(this.dirHandle, CATEGORIES_FILE, []);
+    } else {
+      cats = (await idbTx(this.db, 'categories', 'readonly', (s) => s.getAll())) || [];
+    }
+    return cats.sort((a, b) => (a.Name || '').localeCompare(b.Name || '', 'it', { sensitivity: 'base' }));
+  }
+
+  async addCategory(name, color = '#3B82F6', scopes = ['archive', 'diary', 'notes']) {
+    const cleanName = (name || '').trim();
+    if (!cleanName) throw new Error('Il nome della categoria è obbligatorio.');
+    const validScopes = Array.isArray(scopes) && scopes.length > 0
+      ? scopes.filter((s) => ['archive', 'diary', 'notes'].includes(s))
+      : ['archive', 'diary', 'notes'];
+    const cat = {
+      Id: generateId(),
+      Name: cleanName,
+      Color: color || '#3B82F6',
+      Scopes: validScopes.length > 0 ? validScopes : ['archive', 'diary', 'notes'],
+      CreatedAt: toLocalIsoString(new Date())
+    };
+    if (this.dirHandle) {
+      if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+      const cats = await this.getCategories();
+      cats.push(cat);
+      await this._writeTextFile(this.dirHandle, CATEGORIES_FILE, JSON.stringify(cats, null, 2));
+    } else {
+      await idbTx(this.db, 'categories', 'readwrite', (s) => s.put(cat));
+    }
+    return cat;
+  }
+
+  async updateCategory(id, name, color = '#3B82F6', scopes = ['archive', 'diary', 'notes']) {
+    const cleanName = (name || '').trim();
+    if (!cleanName) throw new Error('Il nome della categoria è obbligatorio.');
+    const validScopes = Array.isArray(scopes) && scopes.length > 0
+      ? scopes.filter((s) => ['archive', 'diary', 'notes'].includes(s))
+      : ['archive', 'diary', 'notes'];
+    const finalScopes = validScopes.length > 0 ? validScopes : ['archive', 'diary', 'notes'];
+    if (this.dirHandle) {
+      if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+      const cats = await this.getCategories();
+      const target = cats.find((c) => c.Id === id);
+      if (!target) return;
+      target.Name = cleanName;
+      target.Color = color || target.Color || '#3B82F6';
+      target.Scopes = finalScopes;
+      await this._writeTextFile(this.dirHandle, CATEGORIES_FILE, JSON.stringify(cats, null, 2));
+    } else {
+      const target = await idbTx(this.db, 'categories', 'readonly', (s) => s.get(id));
+      if (!target) return;
+      target.Name = cleanName;
+      target.Color = color || target.Color || '#3B82F6';
+      target.Scopes = finalScopes;
+      await idbTx(this.db, 'categories', 'readwrite', (s) => s.put(target));
+    }
+  }
+
+  async deleteCategory(id) {
+    if (this.dirHandle) {
+      if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+      const cats = (await this.getCategories()).filter((c) => c.Id !== id);
+      await this._writeTextFile(this.dirHandle, CATEGORIES_FILE, JSON.stringify(cats, null, 2));
+    } else {
+      await idbTx(this.db, 'categories', 'readwrite', (s) => s.delete(id));
+    }
+  }
+
   // ===== IMPORT / EXPORT =====
 
   async importJsonText(jsonText, replaceExisting = true) {
@@ -1163,6 +1246,32 @@ export class MemoBamStorage {
           }
         }
       }
+      if (Array.isArray(data.notes)) {
+        if (this.dirHandle) {
+          const base = replaceExisting ? [] : await this.getNotes();
+          const map = new Map(base.map((n) => [n.Id, n]));
+          for (const note of data.notes) map.set(note.Id, note);
+          await this._saveNotesList(Array.from(map.values()));
+        } else {
+          if (replaceExisting) await idbTx(this.db, 'notes', 'readwrite', (s) => s.clear());
+          for (const note of data.notes) {
+            await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(note));
+          }
+        }
+      }
+      if (Array.isArray(data.categories)) {
+        if (this.dirHandle) {
+          const base = replaceExisting ? [] : await this.getCategories();
+          const map = new Map(base.map((c) => [c.Id, c]));
+          for (const cat of data.categories) map.set(cat.Id, cat);
+          await this._writeTextFile(this.dirHandle, CATEGORIES_FILE, JSON.stringify(Array.from(map.values()), null, 2));
+        } else {
+          if (replaceExisting) await idbTx(this.db, 'categories', 'readwrite', (s) => s.clear());
+          for (const cat of data.categories) {
+            await idbTx(this.db, 'categories', 'readwrite', (s) => s.put(cat));
+          }
+        }
+      }
     }
 
     return { importedArchive, importedDiary };
@@ -1172,6 +1281,7 @@ export class MemoBamStorage {
     await idbTx(this.db, 'archive', 'readwrite', (s) => s.clear());
     await idbTx(this.db, 'diary', 'readwrite', (s) => s.clear());
     await idbTx(this.db, 'notes', 'readwrite', (s) => s.clear());
+    await idbTx(this.db, 'categories', 'readwrite', (s) => s.clear());
     await idbTx(this.db, 'files', 'readwrite', (s) => s.clear());
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'memobam-pwa-v1.9.2';
+const CACHE_NAME = 'memobam-pwa-v1.10.0';
 const APP_SHELL = [
   './',
   './index.html',

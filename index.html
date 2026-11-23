@@ -51,7 +51,7 @@
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v1.9.2</span>
+            <span class="version-label">v1.10.0</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -68,6 +68,11 @@
 
         <button id="installBtn" class="btn btn-primary hidden" title="Installa come App">
           📲 Installa
+        </button>
+
+        <button id="manageCategoriesBtn" class="btn btn-topbar" title="Crea e modifica categorie manuali"
+          aria-label="Gestisci categorie">
+          🏷️ <span class="desktop-only">Categorie</span>
         </button>
 
         <button id="themeToggleBtn" class="btn btn-topbar" title="Passa tra tema chiaro e tema scuro"
@@ -136,6 +141,11 @@
                 <textarea id="customNotesInput" class="field-input notes-textarea" rows="2"
                   placeholder="Note opzionali..."></textarea>
               </label>
+
+              <label class="field-label">
+                <span>Categoria (opzionale)</span>
+                <select id="customCategorySelect" class="field-input js-category-select" data-scope="archive"></select>
+              </label>
             </div>
 
             <!-- Drag & Drop Zone -->
@@ -179,12 +189,14 @@
 
           <!-- TAB 1: Archivio Documenti -->
           <div id="archiveTabContent" class="tab-content active" data-pane="archive">
-            <div class="search-card">
+            <div class="search-card archive-controls-row">
               <label class="checkbox-inline"
                 title="Se attivo, nasconde in Archivio Documenti gli allegati collegati alle righe del Diario">
                 <input id="excludeDiaryAttachmentsChk" type="checkbox" checked>
                 <span>Escludi allegati provenienti dal Diario</span>
               </label>
+              <select id="archiveCategoryFilter" class="field-input category-filter-select js-category-filter"
+                data-scope="archive" title="Filtra documenti per categoria"></select>
             </div>
 
             <div id="archiveSummaryText" class="results-summary">0 schede trovate</div>
@@ -199,6 +211,8 @@
               <input id="diaryDateInput" type="date" class="field-input date-input" title="Giorno del diario">
               <button id="diaryTodayBtn" type="button" class="btn btn-soft-blue btn-sm">Oggi</button>
               <button id="diaryAllDaysBtn" type="button" class="btn btn-neutral btn-sm">Tutti i giorni</button>
+              <select id="diaryCategoryFilter" class="field-input category-filter-select js-category-filter"
+                data-scope="diary" title="Filtra diario per categoria"></select>
             </div>
 
             <!-- Quick Record Input with Formatting Toolbar & Quick Notes Menu -->
@@ -222,6 +236,9 @@
                     <button id="manageQuickNotesBtn" type="button" class="menu-item-btn" role="menuitem">⚙️ Gestisci note pronte...</button>
                   </div>
                 </div>
+
+                <select id="diaryCategorySelect" class="field-input category-select-compact js-category-select"
+                  data-scope="diary" title="Assegna una categoria alla nota del diario"></select>
               </div>
 
               <div class="composer-row">
@@ -246,6 +263,10 @@
 
           <!-- TAB 3: Post-IT -->
           <div id="notesTabContent" class="tab-content" data-pane="notes">
+            <div class="diary-controls-card">
+              <select id="notesCategoryFilter" class="field-input category-filter-select js-category-filter"
+                data-scope="notes" title="Filtra Post-IT per categoria"></select>
+            </div>
             <div class="diary-composer">
               <input id="noteTitleInput" type="text" class="field-input"
                 placeholder="Titolo Post-IT (obbligatorio)..." autocomplete="off" required>
@@ -259,6 +280,8 @@
                 <button id="noteDraftAttachBtn" type="button" class="fmt-btn"
                   title="Allega file al Post-IT in stesura">📎 Allega</button>
                 <input id="noteDraftAttachInput" type="file" multiple class="hidden">
+                <select id="noteCategorySelect" class="field-input category-select-compact js-category-select"
+                  data-scope="notes" title="Assegna una categoria al Post-IT"></select>
               </div>
 
               <div class="composer-row">
@@ -335,6 +358,10 @@
           <span>Note</span>
           <textarea id="editItemNotesInput" class="field-input" rows="4"></textarea>
         </label>
+        <label class="field-label">
+          <span>Categoria</span>
+          <select id="editItemCategorySelect" class="field-input js-category-select" data-scope="archive"></select>
+        </label>
       </div>
       <div class="modal-footer">
         <button id="cancelEditItemBtn" type="button" class="btn btn-neutral">Annulla</button>
@@ -358,6 +385,11 @@
         <label class="checkbox-inline">
           <input id="detailDoneChk" type="checkbox">
           <span><strong>Fatto</strong> (togli la spunta per ricordarti di completarla)</span>
+        </label>
+
+        <label class="field-label">
+          <span>Categoria</span>
+          <select id="detailCategorySelect" class="field-input js-category-select" data-scope="diary"></select>
         </label>
 
         <div class="composer-toolbar">
@@ -472,6 +504,8 @@
           <span id="filePreviewSubtitle" class="detail-timestamp"></span>
         </div>
         <div class="preview-header-actions">
+          <button id="previewEditBtn" type="button" class="btn btn-neutral btn-sm hidden"
+            title="Modifica titolo, note e categoria">✏️ Modifica / Categoria</button>
           <button id="previewOpenSystemBtn" type="button" class="btn btn-primary btn-sm"
             title="Apri con l'applicazione predefinita del sistema">🚀 Apri con app</button>
           <button id="previewSaveFileBtn" type="button" class="btn btn-neutral btn-sm"
@@ -495,7 +529,7 @@
         <div class="credits-brand">
           <img src="./icons/icon.svg" alt="MemoBam" class="credits-app-icon">
           <div>
-            <div class="credits-app-name">MemoBam <span class="version-label">v1.9.2</span></div>
+            <div class="credits-app-name">MemoBam <span class="version-label">v1.10.0</span></div>
             <div class="credits-author">Creato da <strong>Bruno Astemio</strong></div>
           </div>
         </div>
@@ -552,6 +586,11 @@
           <span><strong>Fatto</strong> (togli la spunta per ricordarti di completarlo)</span>
         </label>
 
+        <label class="field-label">
+          <span>Categoria</span>
+          <select id="noteDetailCategorySelect" class="field-input js-category-select" data-scope="notes"></select>
+        </label>
+
         <div class="composer-toolbar">
           <button id="noteDetailBoldBtn" type="button" class="fmt-btn fmt-bold" title="Grassetto">B</button>
           <button id="noteDetailItalicBtn" type="button" class="fmt-btn fmt-italic" title="Corsivo">I</button>
@@ -572,6 +611,59 @@
       <div class="modal-footer">
         <button id="cancelNoteDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
         <button id="saveNoteDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Management Modal -->
+  <div id="categoriesModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="categoriesModalTitle">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <h3 id="categoriesModalTitle">🏷️ Gestione Categorie</h3>
+        <button id="closeCategoriesModalBtn" class="icon-btn" type="button" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="quick-notes-add-row">
+          <input id="categoryNameInput" type="text" class="field-input"
+            placeholder="Nuova categoria (es. Lavoro, Personale, Fatture)..." autocomplete="off">
+          <input id="categoryColorInput" type="color" class="category-color-picker" value="#3B82F6"
+            title="Scegli colore categoria" aria-label="Colore categoria">
+          <button id="saveCategoryBtn" type="button" class="btn btn-primary btn-sm">➕ Aggiungi</button>
+          <button id="cancelCategoryEditBtn" type="button" class="btn btn-neutral btn-sm hidden">Annulla</button>
+        </div>
+
+        <div class="category-scopes-row">
+          <span class="category-scopes-label">Assegna alle funzioni:</span>
+          <label class="checkbox-inline">
+            <input id="catScopeArchiveChk" type="checkbox" checked>
+            <span>📁 Archivio</span>
+          </label>
+          <label class="checkbox-inline">
+            <input id="catScopeDiaryChk" type="checkbox" checked>
+            <span>📓 Diario</span>
+          </label>
+          <label class="checkbox-inline">
+            <input id="catScopeNotesChk" type="checkbox" checked>
+            <span>📝 Post-IT</span>
+          </label>
+        </div>
+
+        <div class="quick-notes-table-wrap">
+          <table class="quick-notes-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Funzioni</th>
+                <th class="col-actions">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="categoriesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeCategoriesFooterBtn" type="button" class="btn btn-neutral">Chiudi</button>
       </div>
     </div>
   </div>

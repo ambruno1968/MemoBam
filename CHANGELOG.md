@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.10.0] - 2026-11-23
+
+### Aggiunto
+- **Gestione manuale delle Categorie**: nuova modale `🏷️ Categorie` per creare, modificare ed eliminare categorie personalizzate con nome, colore e assegnazione selettiva alle funzioni (`📁 Archivio`, `📓 Diario`, `📝 Post-IT`).
+- **Categorizzazione e filtri**: selettori di categoria in creazione e modifica per Archivio, Diario e Post-IT, filtri dedicati per sezione, badge colorati sulle schede e ricerca globale estesa al nome categoria (`categorie.json` / IndexedDB `categories`).
+- **Pulsante `✏️ Modifica / Categoria` in anteprima file**: possibilità di passare direttamente dall'anteprima documento (`#filePreviewModal`) alla modifica di titolo, note e categoria.
+
+### Risolto
+- **Apertura Post-IT al clic sulla scheda**: cliccando su una riga `Post-IT` (`.js-note-row`) ora si apre la finestra di dettaglio, in modo coerente con il Diario.
+
 ## [1.9.2] - 2026-11-23
 
 ### Risolto
