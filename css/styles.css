@@ -1858,3 +1858,48 @@ body {
   color: var(--text-sec);
   white-space: nowrap;
 }
+
+/* Busy / Hourglass Overlay */
+body.is-busy,
+body.is-busy * {
+  cursor: wait !important;
+}
+
+.busy-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.busy-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-solid);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 22px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.busy-hourglass {
+  display: inline-block;
+  font-size: 1.35rem;
+  line-height: 1;
+  animation: memobam-hourglass 1.4s ease-in-out infinite;
+}
+
+@keyframes memobam-hourglass {
+  0% { transform: rotate(0deg); }
+  45% { transform: rotate(180deg); }
+  55% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}

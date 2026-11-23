@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [2.0.0] - 2026-11-23
+
+### Aggiunto
+- **Indicatore di attesa (`⏳ Clessidra`)**: overlay animato (`#busyOverlay`) e cursore di attesa (`cursor: wait`) con ritardo anti-sfarfallio (`120 ms`) durante lettura, salvataggio, connessione cartella e caricamento file (ideale per cartelle cloud come OneDrive/Google Drive).
+
+### Migliorato
+- **Barra superiore essenziale e menu laterale `☰` unificato**: spostati `📁 Cartella`, `🏷️ Categorie`, `⚙️ Dati` e `📲 Installa App` nel menu laterale `☰`, lasciando nella barra superiore solo il contatore schede e il selettore tema `🌙 Scuro / ☀️ Chiaro`.
+- **Titolo finestra ricerca**: semplificato `🔍 Risultati Ricerca Parallela` in `🔍 Risultati Ricerca`.
+
 ## [1.10.2] - 2026-11-23
 
 ### Migliorato

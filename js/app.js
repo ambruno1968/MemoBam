@@ -250,6 +250,8 @@ const els = {
   filePreviewBody: document.getElementById('filePreviewBody'),
 
   entryAttachInput: document.getElementById('entryAttachInput'),
+  busyOverlay: document.getElementById('busyOverlay'),
+  busyOverlayText: document.getElementById('busyOverlayText'),
   toast: document.getElementById('toast')
 };
 
@@ -261,6 +263,43 @@ function showToast(msg) {
   els.toast.classList.remove('hidden');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => els.toast.classList.add('hidden'), 2800);
+}
+
+let busyCount = 0;
+let busyShowTimer = null;
+function showBusy(message = 'Operazione in corso...') {
+  busyCount++;
+  els.busyOverlayText.textContent = message;
+  document.body.classList.add('is-busy');
+  if (busyCount === 1 && !busyShowTimer) {
+    busyShowTimer = setTimeout(() => {
+      busyShowTimer = null;
+      if (busyCount > 0) {
+        els.busyOverlay.classList.remove('hidden');
+      }
+    }, 120);
+  }
+}
+
+function hideBusy() {
+  busyCount = Math.max(0, busyCount - 1);
+  if (busyCount === 0) {
+    if (busyShowTimer) {
+      clearTimeout(busyShowTimer);
+      busyShowTimer = null;
+    }
+    document.body.classList.remove('is-busy');
+    els.busyOverlay.classList.add('hidden');
+  }
+}
+
+async function withBusy(message, fn) {
+  showBusy(message);
+  try {
+    return await fn();
+  } finally {
+    hideBusy();
+  }
 }
 
 function showStatus(msg, isError = false) {
@@ -464,20 +503,22 @@ function initTheme() {
 // ===== DATA LOADING & STORAGE STATUS =====
 
 async function reloadData() {
-  const [archive, diary, notes, quickNotes, categories] = await Promise.all([
-    storage.getArchiveItems(),
-    storage.getDiaryEntries(),
-    storage.getNotes(),
-    storage.getQuickNotes(),
-    storage.getCategories()
-  ]);
-  state.archive = archive;
-  state.diary = diary;
-  state.notes = notes;
-  state.quickNotes = quickNotes;
-  state.categories = categories;
-  updateStorageBadge();
-  renderAll();
+  return withBusy('Caricamento dati...', async () => {
+    const [archive, diary, notes, quickNotes, categories] = await Promise.all([
+      storage.getArchiveItems(),
+      storage.getDiaryEntries(),
+      storage.getNotes(),
+      storage.getQuickNotes(),
+      storage.getCategories()
+    ]);
+    state.archive = archive;
+    state.diary = diary;
+    state.notes = notes;
+    state.quickNotes = quickNotes;
+    state.categories = categories;
+    updateStorageBadge();
+    renderAll();
+  });
 }
 
 function updateStorageBadge() {
@@ -1143,11 +1184,13 @@ async function handleDroppedOrSelectedFiles(fileList) {
   }
 
   try {
-    const added = await storage.addArchiveFiles(
-      files,
-      els.customTitleInput.value,
-      els.customNotesInput.value,
-      els.customCategorySelect.value || null
+    const added = await withBusy('Salvataggio file in corso...', () =>
+      storage.addArchiveFiles(
+        files,
+        els.customTitleInput.value,
+        els.customNotesInput.value,
+        els.customCategorySelect.value || null
+      )
     );
     if (added.length === 0) return;
 
@@ -1195,7 +1238,9 @@ function triggerFileDownload(blob, fileName) {
 }
 
 async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = false) {
-  const blob = await storage.getStoredFileBlob(storedRelativePath, isDiaryAttachment);
+  const blob = await withBusy('Lettura file in corso...', () =>
+    storage.getStoredFileBlob(storedRelativePath, isDiaryAttachment)
+  );
   if (!blob) {
     showToast(`File non disponibile localmente (${storedRelativePath || fileName})`);
     return;
@@ -1687,7 +1732,11 @@ function bindEvents() {
   });
 
   // Categories management modal & filters
-  els.manageCategoriesBtn.addEventListener('click', openCategoriesModal);
+  els.manageCategoriesBtn.addEventListener('click', () => {
+    els.topbarMenuDropdown.classList.add('hidden');
+    els.topbarMenuBtn.setAttribute('aria-expanded', 'false');
+    openCategoriesModal();
+  });
   els.closeCategoriesModalBtn.addEventListener('click', () => els.categoriesModal.classList.add('hidden'));
   els.closeCategoriesFooterBtn.addEventListener('click', () => els.categoriesModal.classList.add('hidden'));
   els.cancelCategoryEditBtn.addEventListener('click', resetCategoryEditMode);
@@ -1813,12 +1862,15 @@ function bindEvents() {
     const richHtml = serializeEditorHtml(els.noteEditor);
     const categoryId = els.noteCategorySelect.value || null;
     try {
-      const note = await storage.addNote(title, text, richHtml || null, categoryId);
-      if (state.noteDraftAttachments.length > 0) {
-        await storage.addNoteAttachments(note.Id, state.noteDraftAttachments);
-        state.noteDraftAttachments = [];
-        renderNoteDraftAttachments();
-      }
+      const note = await withBusy('Salvataggio Post-IT...', async () => {
+        const created = await storage.addNote(title, text, richHtml || null, categoryId);
+        if (state.noteDraftAttachments.length > 0) {
+          await storage.addNoteAttachments(created.Id, state.noteDraftAttachments);
+          state.noteDraftAttachments = [];
+          renderNoteDraftAttachments();
+        }
+        return created;
+      });
       els.noteTitleInput.value = '';
       els.noteEditor.innerHTML = '';
       els.noteCategorySelect.value = '';
@@ -1861,14 +1913,16 @@ function bindEvents() {
     }
     const existing = state.notes.find((n) => n.Id === state.detailNoteId);
     if (!existing) return;
-    await storage.updateNote({
-      ...existing,
-      Title: title,
-      Text: text,
-      RichContentHtml: serializeEditorHtml(els.noteDetailEditor),
-      CategoryId: els.noteDetailCategorySelect.value || null,
-      IsDone: els.noteDetailDoneChk.checked
-    });
+    await withBusy('Salvataggio modifiche...', () =>
+      storage.updateNote({
+        ...existing,
+        Title: title,
+        Text: text,
+        RichContentHtml: serializeEditorHtml(els.noteDetailEditor),
+        CategoryId: els.noteDetailCategorySelect.value || null,
+        IsDone: els.noteDetailDoneChk.checked
+      })
+    );
     els.noteDetailModal.classList.add('hidden');
     await reloadData();
     showToast('Post-IT aggiornato');
@@ -1958,17 +2012,20 @@ function bindEvents() {
     const richHtml = serializeEditorHtml(els.diaryEditor);
     const categoryId = els.diaryCategorySelect.value || null;
     try {
-      const entry = await storage.addDiaryEntry(
-        text,
-        state.diaryDateFilter || getTodayDateStr(),
-        richHtml || null,
-        categoryId
-      );
-      if (state.draftAttachments.length > 0) {
-        await storage.addDiaryAttachments(entry.Id, state.draftAttachments);
-        state.draftAttachments = [];
-        renderDraftAttachments();
-      }
+      const entry = await withBusy('Salvataggio nota diario...', async () => {
+        const created = await storage.addDiaryEntry(
+          text,
+          state.diaryDateFilter || getTodayDateStr(),
+          richHtml || null,
+          categoryId
+        );
+        if (state.draftAttachments.length > 0) {
+          await storage.addDiaryAttachments(created.Id, state.draftAttachments);
+          state.draftAttachments = [];
+          renderDraftAttachments();
+        }
+        return created;
+      });
       els.diaryEditor.innerHTML = '';
       els.diaryCategorySelect.value = '';
       await reloadData();
@@ -1988,7 +2045,7 @@ function bindEvents() {
   const connectFolderAction = async () => {
     try {
       if (!storage.isFolderConnected() && storage.getPendingReconnectFolderName()) {
-        const ok = await storage.reconnectSavedFolder();
+        const ok = await withBusy('Riconnessione cartella...', () => storage.reconnectSavedFolder());
         if (ok) {
           await reloadData();
           await renderSettingsPanels();
@@ -1996,7 +2053,7 @@ function bindEvents() {
           return;
         }
       }
-      const res = await storage.connectFolder();
+      const res = await withBusy('Connessione cartella...', () => storage.connectFolder());
       await reloadData();
       await renderSettingsPanels();
       showToast(`Cartella collegata (${res.writable ? 'Lettura/Scrittura' : 'Sola lettura'}): ${res.name}`);
@@ -2004,12 +2061,18 @@ function bindEvents() {
       if (err?.name !== 'AbortError') showToast(err?.message || 'Errore connessione cartella');
     }
   };
-  els.connectFolderBtn.addEventListener('click', connectFolderAction);
+  els.connectFolderBtn.addEventListener('click', () => {
+    els.topbarMenuDropdown.classList.add('hidden');
+    els.topbarMenuBtn.setAttribute('aria-expanded', 'false');
+    connectFolderAction();
+  });
   els.changePathBtn.addEventListener('click', async () => {
     await renderSettingsPanels();
     els.settingsModal.classList.remove('hidden');
   });
   els.settingsOpenBtn.addEventListener('click', async () => {
+    els.topbarMenuDropdown.classList.add('hidden');
+    els.topbarMenuBtn.setAttribute('aria-expanded', 'false');
     await renderSettingsPanels();
     els.settingsModal.classList.remove('hidden');
   });
@@ -2027,12 +2090,14 @@ function bindEvents() {
     }
     const existing = state.archive.find((i) => i.Id === state.editingArchiveId);
     if (!existing) return;
-    await storage.updateArchiveItem({
-      ...existing,
-      Title: title,
-      Notes: els.editItemNotesInput.value.trim(),
-      CategoryId: els.editItemCategorySelect.value || null
-    });
+    await withBusy('Salvataggio scheda...', () =>
+      storage.updateArchiveItem({
+        ...existing,
+        Title: title,
+        Notes: els.editItemNotesInput.value.trim(),
+        CategoryId: els.editItemCategorySelect.value || null
+      })
+    );
     els.editItemModal.classList.add('hidden');
     await reloadData();
     showToast('Scheda aggiornata');
@@ -2065,13 +2130,15 @@ function bindEvents() {
     }
     const existing = state.diary.find((e) => e.Id === state.detailDiaryId);
     if (!existing) return;
-    await storage.updateDiaryEntry({
-      ...existing,
-      Text: text,
-      RichContentHtml: serializeEditorHtml(els.detailEditor),
-      CategoryId: els.detailCategorySelect.value || null,
-      IsDone: els.detailDoneChk.checked
-    });
+    await withBusy('Salvataggio modifiche...', () =>
+      storage.updateDiaryEntry({
+        ...existing,
+        Text: text,
+        RichContentHtml: serializeEditorHtml(els.detailEditor),
+        CategoryId: els.detailCategorySelect.value || null,
+        IsDone: els.detailDoneChk.checked
+      })
+    );
     els.diaryDetailModal.classList.add('hidden');
     await reloadData();
     showToast('Nota del diario aggiornata');
@@ -2506,12 +2573,14 @@ function bindEvents() {
       let totalArc = 0;
       let totalDia = 0;
       try {
-        for (const file of files) {
-          const res = await storage.importJsonText(await file.text(), true);
-          totalArc += res.importedArchive;
-          totalDia += res.importedDiary;
-        }
-        await reloadData();
+        await withBusy('Importazione dati...', async () => {
+          for (const file of files) {
+            const res = await storage.importJsonText(await file.text(), true);
+            totalArc += res.importedArchive;
+            totalDia += res.importedDiary;
+          }
+          await reloadData();
+        });
         els.settingsModal.classList.add('hidden');
         showToast(`Importati ${totalArc} documenti e ${totalDia} voci diario`);
       } catch {
