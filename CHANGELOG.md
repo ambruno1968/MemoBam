@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.0] - 2026-11-23
+
+### Aggiunto
+- **Nuova sezione `📝 Post-IT`**: tab dedicata con titolo obbligatorio, editor ricco, allegati (drag & drop e modale dettaglio), spunta `Fatto`, banner `Da terminare` e terza colonna dedicata nel popup di ricerca parallela (`Appunti/appunti_index.json` e IndexedDB `notes`).
+
+### Migliorato
+- **Note pronte compatte**: spostate nel menu a tendina **`⚡ Note pronte ▾`** nella toolbar del Diario (nascoste di default).
+- **Caselle di controllo reali (`☑ Spunta`)**: sostituiti i segnaposto `[ ]` / `[x]` con vere `<input type="checkbox">` interattive negli editor e nelle schede salvate (con salvataggio immediato al clic).
+- **Scomparsa laterale al bordo**: in finestra PWA installata, la modalità `👁️ Scomparsa` fa scorrere la finestra lateralmente lasciando esposta una striscia di `28 px` sul bordo.
+
 ## [1.8.0] - 2026-11-23
 
 ### Aggiunto

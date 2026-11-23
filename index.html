@@ -51,7 +51,7 @@
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v1.8.0</span>
+            <span class="version-label">v1.9.0</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -95,6 +95,8 @@
           title="Vai ai risultati in Archivio Documenti">📁 0 Archivio</button>
         <button id="globalDiaryCountBtn" type="button" class="btn btn-xs btn-soft-purple"
           title="Vai ai risultati nel Diario Giornaliero">📓 0 Diario</button>
+        <button id="globalNotesCountBtn" type="button" class="btn btn-xs btn-soft-green"
+          title="Vai ai risultati in Post-IT">📝 0 Post-IT</button>
       </div>
     </section>
 
@@ -170,6 +172,9 @@
             <button id="diaryTabBtn" class="section-tab" type="button" data-section="diary">
               📓 Diario Giornaliero (<span id="diaryTodayCount">0</span>)
             </button>
+            <button id="notesTabBtn" class="section-tab" type="button" data-section="notes">
+              📝 Post-IT (<span id="notesCountBadge">0</span>)
+            </button>
           </div>
 
           <!-- TAB 1: Archivio Documenti -->
@@ -196,15 +201,8 @@
               <button id="diaryAllDaysBtn" type="button" class="btn btn-neutral btn-sm">Tutti i giorni</button>
             </div>
 
-            <!-- Quick Record Input with Quick Notes & Formatting Toolbar -->
+            <!-- Quick Record Input with Formatting Toolbar & Quick Notes Menu -->
             <div class="diary-composer">
-              <div class="quick-notes-bar">
-                <span class="quick-notes-label">⚡ Note pronte:</span>
-                <div id="quickNotesChips" class="quick-notes-chips"></div>
-                <button id="manageQuickNotesBtn" type="button" class="btn btn-xs btn-neutral"
-                  title="Apri la tabella separata per gestire le note pronte">⚙️ Gestisci</button>
-              </div>
-
               <div class="composer-toolbar">
                 <button id="fmtBoldBtn" type="button" class="fmt-btn fmt-bold" title="Grassetto (Ctrl+B)">B</button>
                 <button id="fmtItalicBtn" type="button" class="fmt-btn fmt-italic" title="Corsivo (Ctrl+I)">I</button>
@@ -214,6 +212,16 @@
                 <button id="draftAttachBtn" type="button" class="fmt-btn"
                   title="Allega file alla nota in stesura">📎 Allega</button>
                 <input id="draftAttachInput" type="file" multiple class="hidden">
+
+                <div class="quick-notes-menu-wrap">
+                  <button id="quickNotesToggleBtn" type="button" class="fmt-btn quick-notes-trigger"
+                    aria-haspopup="true" aria-expanded="false" title="Scegli una nota pronta">⚡ Note pronte ▾</button>
+                  <div id="quickNotesDropdown" class="quick-notes-dropdown hidden" role="menu">
+                    <div id="quickNotesChips" class="quick-notes-dropdown-list"></div>
+                    <div class="menu-divider"></div>
+                    <button id="manageQuickNotesBtn" type="button" class="menu-item-btn" role="menuitem">⚙️ Gestisci note pronte...</button>
+                  </div>
+                </div>
               </div>
 
               <div class="composer-row">
@@ -236,6 +244,42 @@
             <div id="diaryList" class="card-list"></div>
           </div>
 
+          <!-- TAB 3: Post-IT -->
+          <div id="notesTabContent" class="tab-content" data-pane="notes">
+            <div class="diary-composer">
+              <input id="noteTitleInput" type="text" class="field-input"
+                placeholder="Titolo Post-IT (obbligatorio)..." autocomplete="off" required>
+
+              <div class="composer-toolbar">
+                <button id="noteFmtBoldBtn" type="button" class="fmt-btn fmt-bold" title="Grassetto (Ctrl+B)">B</button>
+                <button id="noteFmtItalicBtn" type="button" class="fmt-btn fmt-italic" title="Corsivo (Ctrl+I)">I</button>
+                <button id="noteFmtBulletBtn" type="button" class="fmt-btn" title="Elenco puntato">• Elenco</button>
+                <button id="noteFmtCheckBtn" type="button" class="fmt-btn"
+                  title="Inserisci una casella di spunta secondaria">☑ Spunta</button>
+                <button id="noteDraftAttachBtn" type="button" class="fmt-btn"
+                  title="Allega file al Post-IT in stesura">📎 Allega</button>
+                <input id="noteDraftAttachInput" type="file" multiple class="hidden">
+              </div>
+
+              <div class="composer-row">
+                <div id="noteEditor" class="rich-editor" contenteditable="true"
+                  data-placeholder="Scrivi un nuovo Post-IT..."></div>
+                <button id="saveNoteBtn" type="button" class="btn btn-primary save-diary-btn">💾 Salva</button>
+              </div>
+
+              <div id="noteDraftAttachmentsPanel" class="draft-attachments hidden">
+                <div class="draft-attachments-title">
+                  Allegati collegati a questo Post-IT (verranno salvati con 💾 Salva):
+                </div>
+                <div id="noteDraftAttachmentsList" class="attach-chips"></div>
+              </div>
+            </div>
+
+            <div id="notesSummaryText" class="results-summary">0 Post-IT salvati</div>
+
+            <div id="notesList" class="card-list"></div>
+          </div>
+
           <!-- MOBILE SETTINGS PANE -->
           <div id="settingsPane" class="tab-content mobile-only-pane" data-pane="settings">
             <div id="settingsContentMobile" class="settings-stack"></div>
@@ -253,6 +297,10 @@
       <button class="nav-btn" data-tab="diary" type="button">
         <span class="nav-ico">📓</span>
         <span>Diario</span>
+      </button>
+      <button class="nav-btn" data-tab="notes" type="button">
+        <span class="nav-ico">📝</span>
+        <span>Post-IT</span>
       </button>
       <button class="nav-btn" data-tab="drop" type="button">
         <span class="nav-ico">📥</span>
@@ -398,6 +446,14 @@
             </div>
             <div id="popupDiaryList" class="parallel-col-list"></div>
           </section>
+
+          <section class="parallel-col">
+            <div class="parallel-col-header">
+              <h4>📝 Post-IT</h4>
+              <span id="popupNotesBadge" class="count-pill">0</span>
+            </div>
+            <div id="popupNotesList" class="parallel-col-list"></div>
+          </section>
         </div>
       </div>
       <div class="modal-footer">
@@ -439,7 +495,7 @@
         <div class="credits-brand">
           <img src="./icons/icon.svg" alt="MemoBam" class="credits-app-icon">
           <div>
-            <div class="credits-app-name">MemoBam <span class="version-label">v1.8.0</span></div>
+            <div class="credits-app-name">MemoBam <span class="version-label">v1.9.0</span></div>
             <div class="credits-author">Creato da <strong>Bruno Astemio</strong></div>
           </div>
         </div>
@@ -474,8 +530,55 @@
     </div>
   </div>
 
+  <!-- Note ("Post-IT") Detail Modal -->
+  <div id="noteDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="noteDetailModalTitle">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="detail-header-info">
+          <h3 id="noteDetailModalTitle">📝 Dettaglio Post-IT</h3>
+          <span id="noteDetailTimestampText" class="detail-timestamp"></span>
+        </div>
+        <button id="closeNoteDetailModalBtn" class="icon-btn" type="button" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">
+          <span>Titolo (obbligatorio)</span>
+          <input id="noteDetailTitleInput" type="text" class="field-input" autocomplete="off" required>
+        </label>
+
+        <label class="checkbox-inline">
+          <input id="noteDetailDoneChk" type="checkbox">
+          <span><strong>Fatto</strong> (togli la spunta per ricordarti di completarlo)</span>
+        </label>
+
+        <div class="composer-toolbar">
+          <button id="noteDetailBoldBtn" type="button" class="fmt-btn fmt-bold" title="Grassetto">B</button>
+          <button id="noteDetailItalicBtn" type="button" class="fmt-btn fmt-italic" title="Corsivo">I</button>
+          <button id="noteDetailBulletBtn" type="button" class="fmt-btn" title="Elenco puntato">• Elenco</button>
+          <button id="noteDetailCheckBtn" type="button" class="fmt-btn"
+            title="Inserisci una casella di spunta secondaria">☑ Spunta</button>
+          <button id="noteDetailAttachBtn" type="button" class="fmt-btn" title="Allega file">📎 Allega</button>
+          <input id="noteDetailAttachInput" type="file" multiple class="hidden">
+        </div>
+
+        <div id="noteDetailEditor" class="rich-editor rich-editor-lg" contenteditable="true"></div>
+
+        <div id="noteDetailAttachmentsSection" class="detail-attachments hidden">
+          <div class="detail-attachments-title">Allegati collegati:</div>
+          <div id="noteDetailAttachmentsList" class="attach-chips"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelNoteDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
+        <button id="saveNoteDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Hidden file input for attaching files to an existing diary entry -->
   <input id="entryAttachInput" type="file" multiple class="hidden">
+  <input id="noteEntryAttachInput" type="file" multiple class="hidden">
 
   <!-- Toast Notification -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>

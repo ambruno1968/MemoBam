@@ -28,6 +28,7 @@ function getTodayDateStr() {
 const state = {
   archive: [],
   diary: [],
+  notes: [],
   quickNotes: [],
   activeSection: 'archive',
   globalSearch: '',
@@ -36,12 +37,16 @@ const state = {
   diaryDateFilter: getTodayDateStr(),
   pendingExpanded: false,
   draftAttachments: [], // File[]
+  noteDraftAttachments: [], // File[]
   editingArchiveId: null,
   editingQuickNoteId: null,
   detailDiaryId: null,
+  detailNoteId: null,
   pendingAttachEntryId: null,
+  pendingAttachNoteId: null,
   lastArchiveCount: 0,
   lastDiaryCount: 0,
+  lastNotesCount: 0,
   deferredInstallPrompt: null,
   dockMode: localStorage.getItem('memobam_dock_mode') || 'normal',
   autoHide: localStorage.getItem('memobam_auto_hide') === 'true',
@@ -75,6 +80,7 @@ const els = {
   globalSearchCounts: document.getElementById('globalSearchCounts'),
   globalArchiveCountBtn: document.getElementById('globalArchiveCountBtn'),
   globalDiaryCountBtn: document.getElementById('globalDiaryCountBtn'),
+  globalNotesCountBtn: document.getElementById('globalNotesCountBtn'),
 
   pendingBanner: document.getElementById('pendingBanner'),
   pendingSummaryText: document.getElementById('pendingSummaryText'),
@@ -96,9 +102,12 @@ const els = {
 
   archiveTabBtn: document.getElementById('archiveTabBtn'),
   diaryTabBtn: document.getElementById('diaryTabBtn'),
+  notesTabBtn: document.getElementById('notesTabBtn'),
   diaryTodayCount: document.getElementById('diaryTodayCount'),
+  notesCountBadge: document.getElementById('notesCountBadge'),
   archiveTabContent: document.getElementById('archiveTabContent'),
   diaryTabContent: document.getElementById('diaryTabContent'),
+  notesTabContent: document.getElementById('notesTabContent'),
   settingsPane: document.getElementById('settingsPane'),
 
   excludeDiaryAttachmentsChk: document.getElementById('excludeDiaryAttachmentsChk'),
@@ -108,6 +117,8 @@ const els = {
   diaryDateInput: document.getElementById('diaryDateInput'),
   diaryTodayBtn: document.getElementById('diaryTodayBtn'),
   diaryAllDaysBtn: document.getElementById('diaryAllDaysBtn'),
+  quickNotesToggleBtn: document.getElementById('quickNotesToggleBtn'),
+  quickNotesDropdown: document.getElementById('quickNotesDropdown'),
   quickNotesChips: document.getElementById('quickNotesChips'),
   manageQuickNotesBtn: document.getElementById('manageQuickNotesBtn'),
   fmtBoldBtn: document.getElementById('fmtBoldBtn'),
@@ -122,6 +133,20 @@ const els = {
   draftAttachmentsList: document.getElementById('draftAttachmentsList'),
   diarySummaryText: document.getElementById('diarySummaryText'),
   diaryList: document.getElementById('diaryList'),
+
+  noteTitleInput: document.getElementById('noteTitleInput'),
+  noteFmtBoldBtn: document.getElementById('noteFmtBoldBtn'),
+  noteFmtItalicBtn: document.getElementById('noteFmtItalicBtn'),
+  noteFmtBulletBtn: document.getElementById('noteFmtBulletBtn'),
+  noteFmtCheckBtn: document.getElementById('noteFmtCheckBtn'),
+  noteDraftAttachBtn: document.getElementById('noteDraftAttachBtn'),
+  noteDraftAttachInput: document.getElementById('noteDraftAttachInput'),
+  noteEditor: document.getElementById('noteEditor'),
+  saveNoteBtn: document.getElementById('saveNoteBtn'),
+  noteDraftAttachmentsPanel: document.getElementById('noteDraftAttachmentsPanel'),
+  noteDraftAttachmentsList: document.getElementById('noteDraftAttachmentsList'),
+  notesSummaryText: document.getElementById('notesSummaryText'),
+  notesList: document.getElementById('notesList'),
 
   editItemModal: document.getElementById('editItemModal'),
   closeEditItemModalBtn: document.getElementById('closeEditItemModalBtn'),
@@ -165,8 +190,28 @@ const els = {
   closeGlobalPopupFooterBtn: document.getElementById('closeGlobalPopupFooterBtn'),
   popupArchiveBadge: document.getElementById('popupArchiveBadge'),
   popupDiaryBadge: document.getElementById('popupDiaryBadge'),
+  popupNotesBadge: document.getElementById('popupNotesBadge'),
   popupArchiveList: document.getElementById('popupArchiveList'),
   popupDiaryList: document.getElementById('popupDiaryList'),
+  popupNotesList: document.getElementById('popupNotesList'),
+
+  noteDetailModal: document.getElementById('noteDetailModal'),
+  closeNoteDetailModalBtn: document.getElementById('closeNoteDetailModalBtn'),
+  noteDetailTimestampText: document.getElementById('noteDetailTimestampText'),
+  noteDetailTitleInput: document.getElementById('noteDetailTitleInput'),
+  noteDetailDoneChk: document.getElementById('noteDetailDoneChk'),
+  noteDetailBoldBtn: document.getElementById('noteDetailBoldBtn'),
+  noteDetailItalicBtn: document.getElementById('noteDetailItalicBtn'),
+  noteDetailBulletBtn: document.getElementById('noteDetailBulletBtn'),
+  noteDetailCheckBtn: document.getElementById('noteDetailCheckBtn'),
+  noteDetailAttachBtn: document.getElementById('noteDetailAttachBtn'),
+  noteDetailAttachInput: document.getElementById('noteDetailAttachInput'),
+  noteDetailEditor: document.getElementById('noteDetailEditor'),
+  noteDetailAttachmentsSection: document.getElementById('noteDetailAttachmentsSection'),
+  noteDetailAttachmentsList: document.getElementById('noteDetailAttachmentsList'),
+  cancelNoteDetailBtn: document.getElementById('cancelNoteDetailBtn'),
+  saveNoteDetailBtn: document.getElementById('saveNoteDetailBtn'),
+  noteEntryAttachInput: document.getElementById('noteEntryAttachInput'),
 
   filePreviewModal: document.getElementById('filePreviewModal'),
   filePreviewTitle: document.getElementById('filePreviewTitle'),
@@ -258,6 +303,7 @@ function execEditorCmd(editor, cmd) {
 function insertSecondaryCheckBox(editor) {
   editor.focus();
   const sel = window.getSelection();
+  let blockNode = null;
   let lineText = '';
   if (sel && sel.rangeCount > 0) {
     let node = sel.anchorNode;
@@ -265,35 +311,111 @@ function insertSecondaryCheckBox(editor) {
       node = node.parentNode;
     }
     if (node && node !== editor) {
+      blockNode = node;
       lineText = node.textContent || '';
     } else {
       lineText = editor.textContent || '';
     }
   }
-  // Prevent repeating secondary checkbox on the same line (matching DiaryRichTextHelper)
-  if (lineText.includes('[ ]') || lineText.includes('[x]')) {
+  const hasCheckboxInBlock = blockNode
+    ? Boolean(blockNode.querySelector?.('input[type="checkbox"]'))
+    : Boolean(editor.querySelector('input[type="checkbox"]') && !editor.innerHTML.includes('<br>') && !editor.querySelector('div,p,li'));
+
+  // Prevent repeating secondary checkbox on the same line
+  if (hasCheckboxInBlock || /\[\s*[xX ]?\s*\]/.test(lineText)) {
     return;
   }
-  document.execCommand('insertText', false, '[ ] ');
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'diary-inline-check';
+  const space = document.createTextNode('\u00A0');
+
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(space);
+    range.insertNode(cb);
+    range.setStartAfter(space);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    editor.appendChild(cb);
+    editor.appendChild(space);
+  }
+}
+
+function serializeEditorHtml(editor) {
+  editor.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    if (cb.checked) cb.setAttribute('checked', '');
+    else cb.removeAttribute('checked');
+  });
+  return editor.innerHTML.trim();
 }
 
 function extractEditorPlainText(editor) {
   const clone = editor.cloneNode(true);
+  clone.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.replaceWith(document.createTextNode(cb.checked ? '[x] ' : '[ ] '));
+  });
   clone.querySelectorAll('li').forEach((li) => {
     li.prepend(document.createTextNode('• '));
   });
   return (clone.innerText || clone.textContent || '').trim();
 }
 
-function renderDiaryBodyHtml(entry) {
-  if (entry.RichContentHtml) {
-    return entry.RichContentHtml;
+function convertBracketCheckboxes(html, ownerType, ownerId) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+
+  const walker = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let n;
+  while ((n = walker.nextNode())) {
+    if (/\[\s*[xX ]?\s*\]/.test(n.nodeValue)) {
+      textNodes.push(n);
+    }
   }
-  const escaped = escapeHtml(entry.Text || '');
-  return escaped.replace(/\[( |x)\]/g, (_, ch) => {
-    const checked = ch === 'x' ? 'checked' : '';
-    return `<input type="checkbox" class="diary-inline-check" data-entry-id="${entry.Id}" ${checked}>`;
+
+  for (const tn of textNodes) {
+    const frag = document.createDocumentFragment();
+    const parts = tn.nodeValue.split(/(\[\s*[xX ]?\s*\])/g);
+    for (const part of parts) {
+      const m = part.match(/^\[(\s*[xX ]?\s*)\]$/);
+      if (m) {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'diary-inline-check';
+        if (/x/i.test(m[1])) cb.setAttribute('checked', '');
+        if (ownerType && ownerId) {
+          cb.dataset.ownerType = ownerType;
+          cb.dataset.ownerId = ownerId;
+        }
+        frag.appendChild(cb);
+      } else if (part) {
+        frag.appendChild(document.createTextNode(part));
+      }
+    }
+    tn.replaceWith(frag);
+  }
+
+  tmp.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.classList.add('diary-inline-check');
+    if (ownerType && ownerId) {
+      cb.dataset.ownerType = ownerType;
+      cb.dataset.ownerId = ownerId;
+    }
   });
+
+  return tmp.innerHTML;
+}
+
+function renderDiaryBodyHtml(entry, ownerType = 'diary') {
+  const rawHtml = entry.RichContentHtml
+    ? entry.RichContentHtml
+    : escapeHtml(entry.Text || '').replaceAll('\n', '<br>');
+  return convertBracketCheckboxes(rawHtml, ownerType, entry.Id);
 }
 
 // ===== THEME =====
@@ -314,13 +436,15 @@ function initTheme() {
 // ===== DATA LOADING & STORAGE STATUS =====
 
 async function reloadData() {
-  const [archive, diary, quickNotes] = await Promise.all([
+  const [archive, diary, notes, quickNotes] = await Promise.all([
     storage.getArchiveItems(),
     storage.getDiaryEntries(),
+    storage.getNotes(),
     storage.getQuickNotes()
   ]);
   state.archive = archive;
   state.diary = diary;
+  state.notes = notes;
   state.quickNotes = quickNotes;
   updateStorageBadge();
   renderAll();
@@ -404,6 +528,7 @@ function renderAll() {
   renderPending();
   renderArchive();
   renderDiary();
+  renderNotes();
   renderQuickNotesChips();
 }
 
@@ -416,12 +541,14 @@ function updateGlobalSearchCounts() {
   els.globalSearchCounts.classList.toggle('hidden', !active);
   els.globalArchiveCountBtn.textContent = `📁 ${state.lastArchiveCount} Archivio`;
   els.globalDiaryCountBtn.textContent = `📓 ${state.lastDiaryCount} Diario`;
+  els.globalNotesCountBtn.textContent = `📝 ${state.lastNotesCount} Post-IT`;
 }
 
 function renderPending() {
   const pendingArchive = state.archive.filter((i) => !i.IsDone);
   const pendingDiary = state.diary.filter((e) => !e.IsDone);
-  const total = pendingArchive.length + pendingDiary.length;
+  const pendingNotes = state.notes.filter((n) => !n.IsDone);
+  const total = pendingArchive.length + pendingDiary.length + pendingNotes.length;
 
   els.navPendingBadge.textContent = total;
   els.navPendingBadge.classList.toggle('hidden', total === 0);
@@ -455,6 +582,13 @@ function renderPending() {
       badge: '📓 Diario',
       summary: e.Text,
       stamp: `${formatDateIt(e.Timestamp)} ${formatTimeIt(e.Timestamp)}`
+    })),
+    ...pendingNotes.map((n) => ({
+      type: 'notes',
+      id: n.Id,
+      badge: '📝 Post-IT',
+      summary: n.Title || n.Text,
+      stamp: `${formatDateIt(n.CreatedAt)} ${formatTimeIt(n.CreatedAt)}`
     }))
   ];
 
@@ -502,6 +636,21 @@ function getFilteredDiaryEntries(ignoreDayFilterWhenGlobal = true) {
   });
 }
 
+function getFilteredNotes() {
+  const effectiveQuery = state.globalSearch;
+  const effectiveDate = state.globalDateFilter;
+
+  return state.notes.filter((n) => {
+    const stamp = n.CreatedAt || n.UpdatedAt || '';
+    if (effectiveDate && stamp.slice(0, 10) !== effectiveDate) return false;
+    return matchesTerms(
+      [n.Title, n.Text, ...(n.Attachments || []).map((a) => a.FileName)],
+      stamp,
+      effectiveQuery
+    );
+  });
+}
+
 function renderGlobalSearchPopup(openIfActive = false) {
   const hasFilter = Boolean(state.globalSearch || state.globalDateFilter);
   if (!hasFilter) {
@@ -511,6 +660,7 @@ function renderGlobalSearchPopup(openIfActive = false) {
 
   const archiveResults = getFilteredArchiveItems();
   const diaryResults = getFilteredDiaryEntries(true);
+  const notesResults = getFilteredNotes();
 
   const parts = [];
   if (state.globalSearch) parts.push(`"${state.globalSearch}"`);
@@ -519,6 +669,7 @@ function renderGlobalSearchPopup(openIfActive = false) {
 
   els.popupArchiveBadge.textContent = archiveResults.length;
   els.popupDiaryBadge.textContent = diaryResults.length;
+  els.popupNotesBadge.textContent = notesResults.length;
 
   els.popupArchiveList.innerHTML = archiveResults.length === 0
     ? `<div class="empty-state">Nessun documento trovato</div>`
@@ -538,6 +689,17 @@ function renderGlobalSearchPopup(openIfActive = false) {
         <button type="button" class="parallel-row js-popup-diary-row ${entry.IsDone ? '' : 'pending-highlight'}" data-id="${entry.Id}">
           <div class="parallel-row-title">${escapeHtml(entry.Text)}</div>
           <div class="parallel-row-meta">📅 ${formatDateIt(entry.Timestamp)} 🕒 ${formatTimeIt(entry.Timestamp)}${(entry.Attachments || []).length ? ` • 📎 ${entry.Attachments.length} allegati` : ''}</div>
+        </button>`)
+      .join('');
+
+  els.popupNotesList.innerHTML = notesResults.length === 0
+    ? `<div class="empty-state">Nessun Post-IT trovato</div>`
+    : notesResults
+      .map((note) => `
+        <button type="button" class="parallel-row js-popup-notes-row ${note.IsDone ? '' : 'pending-highlight'}" data-id="${note.Id}">
+          <div class="parallel-row-title">${escapeHtml(note.Title || note.Text)}</div>
+          <div class="parallel-row-meta">📅 ${formatDateIt(note.CreatedAt)} 🕒 ${formatTimeIt(note.CreatedAt)}${(note.Attachments || []).length ? ` • 📎 ${note.Attachments.length} allegati` : ''}</div>
+          ${note.Title && note.Text ? `<div class="parallel-row-sub">${escapeHtml(note.Text)}</div>` : ''}
         </button>`)
       .join('');
 
@@ -659,6 +821,74 @@ function renderDiary() {
     .join('');
 }
 
+function renderNotes() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const palette = isDark ? DARK_PASTEL : LIGHT_PASTEL;
+
+  const filtered = getFilteredNotes();
+  state.lastNotesCount = filtered.length;
+  updateGlobalSearchCounts();
+
+  els.notesCountBadge.textContent = state.notes.length;
+  els.notesSummaryText.textContent = filtered.length === 1
+    ? '1 Post-IT salvato'
+    : `${filtered.length} Post-IT salvati`;
+
+  if (filtered.length === 0) {
+    els.notesList.innerHTML = `<div class="empty-state">Nessun Post-IT trovato.<br>Scrivi qui sopra e clicca 💾 Salva per creare il primo Post-IT.</div>`;
+    return;
+  }
+
+  els.notesList.innerHTML = filtered
+    .map((note, idx) => {
+      const color = palette[idx % palette.length];
+      const pendingClass = note.IsDone ? '' : 'pending-highlight';
+      const attachmentsHtml = (note.Attachments || [])
+        .map((att) => `
+          <span class="attach-chip">
+            <button class="attach-open-btn js-note-att-open" data-note-id="${note.Id}" data-att-id="${att.Id}" type="button" title="Apri allegato">
+              📎 ${escapeHtml(att.FileName)}
+            </button>
+            <button class="attach-remove-btn js-note-att-remove" data-note-id="${note.Id}" data-att-id="${att.Id}" type="button" title="Rimuovi allegato">✕</button>
+          </span>`)
+        .join('');
+
+      return `
+      <article class="item-card js-note-row ${pendingClass}" style="background:${color.bg};border-color:${note.IsDone ? color.border : '#F59E0B'}" data-id="${note.Id}">
+        <input type="checkbox" class="done-checkbox js-note-done" data-id="${note.Id}"
+          ${note.IsDone ? 'checked' : ''} title="Fatto (togli la spunta per ricordarti di terminarlo)">
+        <span class="diary-date-pill">📅 ${formatDateIt(note.CreatedAt)} &nbsp;🕒 ${formatTimeIt(note.CreatedAt)}</span>
+        <div class="card-main">
+          ${note.Title ? `<div class="card-title">${escapeHtml(note.Title)}</div>` : ''}
+          <div class="diary-text">${renderDiaryBodyHtml(note, 'notes')}</div>
+          ${attachmentsHtml ? `<div class="attach-chips">${attachmentsHtml}</div>` : ''}
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-xs btn-primary js-note-open" data-id="${note.Id}" type="button" title="Apri Post-IT completo">Apri</button>
+          <button class="btn btn-xs btn-neutral js-note-attach" data-id="${note.Id}" type="button" title="Allega file a questo Post-IT">📎 Allega</button>
+          <button class="btn btn-xs btn-danger-soft js-note-delete" data-id="${note.Id}" type="button">Elimina</button>
+        </div>
+      </article>`;
+    })
+    .join('');
+}
+
+function renderNoteDraftAttachments() {
+  if (state.noteDraftAttachments.length === 0) {
+    els.noteDraftAttachmentsPanel.classList.add('hidden');
+    els.noteDraftAttachmentsList.innerHTML = '';
+    return;
+  }
+  els.noteDraftAttachmentsPanel.classList.remove('hidden');
+  els.noteDraftAttachmentsList.innerHTML = state.noteDraftAttachments
+    .map((file, idx) => `
+      <span class="attach-chip">
+        <span>📎 ${escapeHtml(file.name)}</span>
+        <button class="attach-remove-btn js-remove-note-draft-att" data-idx="${idx}" type="button" title="Rimuovi allegato dalla bozza">✕</button>
+      </span>`)
+    .join('');
+}
+
 function renderDraftAttachments() {
   if (state.draftAttachments.length === 0) {
     els.draftAttachmentsPanel.classList.add('hidden');
@@ -677,13 +907,13 @@ function renderDraftAttachments() {
 
 function renderQuickNotesChips() {
   if (!state.quickNotes || state.quickNotes.length === 0) {
-    els.quickNotesChips.innerHTML = `<span style="font-size:0.74rem;color:var(--text-muted)">Nessuna nota pronta</span>`;
+    els.quickNotesChips.innerHTML = `<span style="font-size:0.78rem;color:var(--text-muted);padding:6px 8px">Nessuna nota pronta</span>`;
     return;
   }
   els.quickNotesChips.innerHTML = state.quickNotes
     .map((n) => `
-      <button type="button" class="quick-note-chip js-quick-note-chip" data-id="${n.Id}"
-        title="Clicca per inserire questa nota pronta nell'editor">${escapeHtml(n.Text)}</button>`)
+      <button type="button" class="menu-item-btn js-quick-note-chip" data-id="${n.Id}" role="menuitem"
+        title="Clicca per inserire questa nota pronta nell'editor">⚡ ${escapeHtml(n.Text)}</button>`)
     .join('');
 }
 
@@ -731,17 +961,22 @@ async function handleDroppedOrSelectedFiles(fileList) {
   const files = Array.from(fileList || []);
   if (files.length === 0) return;
 
-  if (state.activeSection === 'diary') {
+  if (state.activeSection === 'diary' || state.activeSection === 'notes') {
+    const targetList = state.activeSection === 'notes' ? state.noteDraftAttachments : state.draftAttachments;
     for (const file of files) {
-      if (!state.draftAttachments.some((f) => f.name === file.name && f.size === file.size)) {
-        state.draftAttachments.push(file);
+      if (!targetList.some((f) => f.name === file.name && f.size === file.size)) {
+        targetList.push(file);
       }
     }
-    renderDraftAttachments();
+    if (state.activeSection === 'notes') {
+      renderNoteDraftAttachments();
+    } else {
+      renderDraftAttachments();
+    }
     showStatus(
       files.length === 1
-        ? `Allegato pronto per la nota: "${files[0].name}" (clicca 💾 Salva)`
-        : `${files.length} allegati pronti per la nota (clicca 💾 Salva)`
+        ? `Allegato pronto: "${files[0].name}" (clicca 💾 Salva)`
+        : `${files.length} allegati pronti (clicca 💾 Salva)`
     );
     return;
   }
@@ -844,6 +1079,18 @@ async function openPendingItem(type, id) {
     return;
   }
 
+  if (type === 'notes') {
+    const note = state.notes.find((n) => n.Id === id);
+    if (note) {
+      switchSection('notes');
+      renderNotes();
+      const card = els.notesList.querySelector(`.item-card[data-id="${id}"]`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      openNoteDetailModal(note);
+    }
+    return;
+  }
+
   const entry = state.diary.find((d) => d.Id === id);
   if (entry) {
     state.diaryDateFilter = (entry.Timestamp || '').slice(0, 10);
@@ -860,10 +1107,40 @@ function openDiaryDetailModal(entry) {
   state.detailDiaryId = entry.Id;
   els.detailTimestampText.textContent = `📅 ${formatDateIt(entry.Timestamp)}   🕒 ${formatTimeIt(entry.Timestamp)}`;
   els.detailDoneChk.checked = Boolean(entry.IsDone);
-  els.detailEditor.innerHTML = entry.RichContentHtml || escapeHtml(entry.Text || '').replaceAll('\n', '<br>');
+  els.detailEditor.innerHTML = renderDiaryBodyHtml(entry, 'diary');
   renderDetailAttachments(entry);
   els.diaryDetailModal.classList.remove('hidden');
   els.detailEditor.focus();
+}
+
+function openNoteDetailModal(note) {
+  state.detailNoteId = note.Id;
+  els.noteDetailTimestampText.textContent = `📅 ${formatDateIt(note.CreatedAt)}   🕒 ${formatTimeIt(note.CreatedAt)}`;
+  els.noteDetailTitleInput.value = note.Title || '';
+  els.noteDetailDoneChk.checked = Boolean(note.IsDone);
+  els.noteDetailEditor.innerHTML = renderDiaryBodyHtml(note, 'notes');
+  renderNoteDetailAttachments(note);
+  els.noteDetailModal.classList.remove('hidden');
+  els.noteDetailEditor.focus();
+}
+
+function renderNoteDetailAttachments(note) {
+  const atts = note.Attachments || [];
+  if (atts.length === 0) {
+    els.noteDetailAttachmentsSection.classList.add('hidden');
+    els.noteDetailAttachmentsList.innerHTML = '';
+    return;
+  }
+  els.noteDetailAttachmentsSection.classList.remove('hidden');
+  els.noteDetailAttachmentsList.innerHTML = atts
+    .map((att) => `
+      <span class="attach-chip">
+        <button class="attach-open-btn js-note-att-open" data-note-id="${note.Id}" data-att-id="${att.Id}" type="button">
+          📎 ${escapeHtml(att.FileName)}
+        </button>
+        <button class="attach-remove-btn js-note-detail-att-remove" data-note-id="${note.Id}" data-att-id="${att.Id}" type="button" title="Rimuovi allegato">✕</button>
+      </span>`)
+    .join('');
 }
 
 function renderDetailAttachments(entry) {
@@ -950,14 +1227,17 @@ function switchSection(section) {
   // Desktop tabs
   els.archiveTabBtn.classList.toggle('active', section === 'archive');
   els.diaryTabBtn.classList.toggle('active', section === 'diary');
+  els.notesTabBtn.classList.toggle('active', section === 'notes');
   els.archiveTabContent.classList.toggle('active', section === 'archive');
   els.diaryTabContent.classList.toggle('active', section === 'diary');
+  els.notesTabContent.classList.toggle('active', section === 'notes');
 
   // Mobile bottom nav & panes
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === section));
   els.dropPane.classList.toggle('mobile-active', section === 'drop');
   els.archiveTabContent.classList.toggle('mobile-active', section === 'archive' || section === 'pending');
   els.diaryTabContent.classList.toggle('mobile-active', section === 'diary');
+  els.notesTabContent.classList.toggle('mobile-active', section === 'notes');
   els.settingsPane.classList.toggle('mobile-active', section === 'settings');
 
   if (section === 'pending') {
@@ -975,6 +1255,7 @@ function bindEvents() {
   // Desktop section tabs
   els.archiveTabBtn.addEventListener('click', () => switchSection('archive'));
   els.diaryTabBtn.addEventListener('click', () => switchSection('diary'));
+  els.notesTabBtn.addEventListener('click', () => switchSection('notes'));
 
   // Mobile bottom nav
   document.querySelectorAll('.nav-btn').forEach((btn) => {
@@ -1016,6 +1297,9 @@ function bindEvents() {
   els.globalDiaryCountBtn.addEventListener('click', () => {
     renderGlobalSearchPopup(true);
   });
+  els.globalNotesCountBtn.addEventListener('click', () => {
+    renderGlobalSearchPopup(true);
+  });
   els.closeGlobalPopupTopBtn.addEventListener('click', () => els.globalSearchPopup.classList.add('hidden'));
   els.closeGlobalPopupFooterBtn.addEventListener('click', () => els.globalSearchPopup.classList.add('hidden'));
   els.globalSearchPopup.addEventListener('click', (e) => {
@@ -1024,8 +1308,10 @@ function bindEvents() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (!els.topbarMenuDropdown.classList.contains('hidden')) els.topbarMenuDropdown.classList.add('hidden');
+      else if (!els.quickNotesDropdown.classList.contains('hidden')) els.quickNotesDropdown.classList.add('hidden');
       else if (!els.filePreviewModal.classList.contains('hidden')) closeFilePreview();
       else if (!els.diaryDetailModal.classList.contains('hidden')) els.diaryDetailModal.classList.add('hidden');
+      else if (!els.noteDetailModal.classList.contains('hidden')) els.noteDetailModal.classList.add('hidden');
       else if (!els.creditsModal.classList.contains('hidden')) els.creditsModal.classList.add('hidden');
       else if (!els.globalSearchPopup.classList.contains('hidden')) els.globalSearchPopup.classList.add('hidden');
     }
@@ -1041,6 +1327,10 @@ function bindEvents() {
     if (!els.topbarMenuDropdown.classList.contains('hidden') && !e.target.closest('.topbar-menu-wrap')) {
       els.topbarMenuDropdown.classList.add('hidden');
       els.topbarMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (!els.quickNotesDropdown.classList.contains('hidden') && !e.target.closest('.quick-notes-menu-wrap')) {
+      els.quickNotesDropdown.classList.add('hidden');
+      els.quickNotesToggleBtn.setAttribute('aria-expanded', 'false');
     }
   });
 
@@ -1124,8 +1414,15 @@ function bindEvents() {
     }
   });
 
-  // Quick Notes ("Note Pronte") Modal & Chips
+  // Quick Notes ("Note Pronte") Dropdown, Modal & Chips
+  els.quickNotesToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = els.quickNotesDropdown.classList.toggle('hidden');
+    els.quickNotesToggleBtn.setAttribute('aria-expanded', String(!isHidden));
+  });
   els.manageQuickNotesBtn.addEventListener('click', () => {
+    els.quickNotesDropdown.classList.add('hidden');
+    els.quickNotesToggleBtn.setAttribute('aria-expanded', 'false');
     resetQuickNoteEditMode();
     renderQuickNotesTable();
     els.quickNotesModal.classList.remove('hidden');
@@ -1194,6 +1491,134 @@ function bindEvents() {
     if (!els.globalSearchPopup.classList.contains('hidden')) renderGlobalSearchPopup(false);
   });
 
+  // Appunti composer & detail modal
+  els.noteFmtBoldBtn.addEventListener('click', () => execEditorCmd(els.noteEditor, 'bold'));
+  els.noteFmtItalicBtn.addEventListener('click', () => execEditorCmd(els.noteEditor, 'italic'));
+  els.noteFmtBulletBtn.addEventListener('click', () => execEditorCmd(els.noteEditor, 'insertUnorderedList'));
+  els.noteFmtCheckBtn.addEventListener('click', () => insertSecondaryCheckBox(els.noteEditor));
+  els.noteDraftAttachBtn.addEventListener('click', () => els.noteDraftAttachInput.click());
+  els.noteDraftAttachInput.addEventListener('change', () => {
+    for (const file of Array.from(els.noteDraftAttachInput.files || [])) {
+      if (!state.noteDraftAttachments.some((f) => f.name === file.name && f.size === file.size)) {
+        state.noteDraftAttachments.push(file);
+      }
+    }
+    els.noteDraftAttachInput.value = '';
+    renderNoteDraftAttachments();
+  });
+  els.saveNoteBtn.addEventListener('click', async () => {
+    let text = extractEditorPlainText(els.noteEditor);
+    const title = els.noteTitleInput.value.trim();
+    if (!title) {
+      showToast('Il titolo del Post-IT è obbligatorio.');
+      els.noteTitleInput.focus();
+      return;
+    }
+    if (!text && state.noteDraftAttachments.length === 0) return;
+    if (!text && state.noteDraftAttachments.length > 0) {
+      text = `Allegati (${state.noteDraftAttachments.map((f) => f.name).join(', ')})`;
+    }
+    const richHtml = serializeEditorHtml(els.noteEditor);
+    try {
+      const note = await storage.addNote(title, text, richHtml || null);
+      if (state.noteDraftAttachments.length > 0) {
+        await storage.addNoteAttachments(note.Id, state.noteDraftAttachments);
+        state.noteDraftAttachments = [];
+        renderNoteDraftAttachments();
+      }
+      els.noteTitleInput.value = '';
+      els.noteEditor.innerHTML = '';
+      await reloadData();
+      showStatus(`Post-IT salvato (${formatDateIt(note.CreatedAt)} ${formatTimeIt(note.CreatedAt)})`);
+    } catch (err) {
+      showStatus(err?.message || 'Errore salvataggio Post-IT', true);
+    }
+  });
+
+  els.closeNoteDetailModalBtn.addEventListener('click', () => els.noteDetailModal.classList.add('hidden'));
+  els.cancelNoteDetailBtn.addEventListener('click', () => els.noteDetailModal.classList.add('hidden'));
+  els.noteDetailBoldBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'bold'));
+  els.noteDetailItalicBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'italic'));
+  els.noteDetailBulletBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'insertUnorderedList'));
+  els.noteDetailCheckBtn.addEventListener('click', () => insertSecondaryCheckBox(els.noteDetailEditor));
+  els.noteDetailAttachBtn.addEventListener('click', () => els.noteDetailAttachInput.click());
+  els.noteDetailAttachInput.addEventListener('change', async () => {
+    const files = Array.from(els.noteDetailAttachInput.files || []);
+    els.noteDetailAttachInput.value = '';
+    if (!files.length || !state.detailNoteId) return;
+    await storage.addNoteAttachments(state.detailNoteId, files);
+    await reloadData();
+    const updated = state.notes.find((n) => n.Id === state.detailNoteId);
+    if (updated) renderNoteDetailAttachments(updated);
+    showToast(`Collegati ${files.length} allegati`);
+  });
+  els.saveNoteDetailBtn.addEventListener('click', async () => {
+    const text = extractEditorPlainText(els.noteDetailEditor);
+    const title = els.noteDetailTitleInput.value.trim();
+    if (!title) {
+      showToast('Il titolo del Post-IT è obbligatorio.');
+      els.noteDetailTitleInput.focus();
+      return;
+    }
+    if (!text) {
+      showToast('Il testo del Post-IT non può essere vuoto.');
+      els.noteDetailEditor.focus();
+      return;
+    }
+    const existing = state.notes.find((n) => n.Id === state.detailNoteId);
+    if (!existing) return;
+    await storage.updateNote({
+      ...existing,
+      Title: title,
+      Text: text,
+      RichContentHtml: serializeEditorHtml(els.noteDetailEditor),
+      IsDone: els.noteDetailDoneChk.checked
+    });
+    els.noteDetailModal.classList.add('hidden');
+    await reloadData();
+    showToast('Post-IT aggiornato');
+  });
+
+  els.noteEntryAttachInput.addEventListener('change', async () => {
+    const files = Array.from(els.noteEntryAttachInput.files || []);
+    els.noteEntryAttachInput.value = '';
+    if (!files.length || !state.pendingAttachNoteId) return;
+    try {
+      await storage.addNoteAttachments(state.pendingAttachNoteId, files);
+      await reloadData();
+      showStatus(files.length === 1 ? `Allegato "${files[0].name}" collegato.` : `Collegati ${files.length} allegati.`);
+    } catch (err) {
+      showStatus(err?.message || 'Errore allegato appunto', true);
+    }
+    state.pendingAttachNoteId = null;
+  });
+
+  els.notesList.addEventListener('dragover', (e) => {
+    const row = e.target.closest('.js-note-row');
+    if (!row) return;
+    e.preventDefault();
+    row.classList.add('drag-over');
+  });
+  els.notesList.addEventListener('dragleave', (e) => {
+    const row = e.target.closest('.js-note-row');
+    if (row) row.classList.remove('drag-over');
+  });
+  els.notesList.addEventListener('drop', async (e) => {
+    const row = e.target.closest('.js-note-row');
+    if (!row) return;
+    e.preventDefault();
+    row.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    try {
+      await storage.addNoteAttachments(row.dataset.id, files);
+      await reloadData();
+      showStatus(files.length === 1 ? `Allegato "${files[0].name}" collegato.` : `Collegati ${files.length} allegati.`);
+    } catch (err) {
+      showStatus(err?.message || 'Errore allegato appunto', true);
+    }
+  });
+
   // Diary date controls
   els.diaryDateInput.value = state.diaryDateFilter;
   els.diaryDateInput.addEventListener('change', () => {
@@ -1235,7 +1660,7 @@ function bindEvents() {
       text = `Allegati (${state.draftAttachments.map((f) => f.name).join(', ')})`;
     }
 
-    const richHtml = els.diaryEditor.innerHTML.trim();
+    const richHtml = serializeEditorHtml(els.diaryEditor);
     try {
       const entry = await storage.addDiaryEntry(
         text,
@@ -1344,7 +1769,7 @@ function bindEvents() {
     await storage.updateDiaryEntry({
       ...existing,
       Text: text,
-      RichContentHtml: els.detailEditor.innerHTML.trim(),
+      RichContentHtml: serializeEditorHtml(els.detailEditor),
       IsDone: els.detailDoneChk.checked
     });
     els.diaryDetailModal.classList.add('hidden');
@@ -1415,13 +1840,22 @@ function bindEvents() {
       }
       return;
     }
+    if (target.closest('.js-popup-notes-row')) {
+      const id = target.closest('.js-popup-notes-row').dataset.id;
+      const note = state.notes.find((n) => n.Id === id);
+      if (note) {
+        openNoteDetailModal(note);
+      }
+      return;
+    }
 
     // Pending actions
     if (target.closest('.js-pending-done')) {
       const btn = target.closest('.js-pending-done');
       const { type, id } = btn.dataset;
       if (type === 'archive') await storage.setArchiveDone(id, true);
-      else await storage.setDiaryDone(id, true);
+      else if (type === 'diary') await storage.setDiaryDone(id, true);
+      else if (type === 'notes') await storage.setNoteDone(id, true);
       await reloadData();
       return;
     }
@@ -1486,6 +1920,8 @@ function bindEvents() {
     if (target.closest('.js-quick-note-chip')) {
       const id = target.closest('.js-quick-note-chip').dataset.id;
       const note = state.quickNotes.find((n) => n.Id === id);
+      els.quickNotesDropdown.classList.add('hidden');
+      els.quickNotesToggleBtn.setAttribute('aria-expanded', 'false');
       if (note) insertTextIntoDiaryEditor(note.Text);
       return;
     }
@@ -1519,6 +1955,67 @@ function bindEvents() {
         state.quickNotes = await storage.getQuickNotes();
         renderQuickNotesChips();
         renderQuickNotesTable();
+      }
+      return;
+    }
+
+    // Appunti actions
+    if (target.closest('.js-remove-note-draft-att')) {
+      const idx = Number(target.closest('.js-remove-note-draft-att').dataset.idx);
+      state.noteDraftAttachments.splice(idx, 1);
+      renderNoteDraftAttachments();
+      return;
+    }
+    if (target.closest('.js-note-open')) {
+      const id = target.closest('.js-note-open').dataset.id;
+      const note = state.notes.find((n) => n.Id === id);
+      if (note) openNoteDetailModal(note);
+      return;
+    }
+    if (target.closest('.js-note-attach')) {
+      state.pendingAttachNoteId = target.closest('.js-note-attach').dataset.id;
+      els.noteEntryAttachInput.click();
+      return;
+    }
+    if (target.closest('.js-note-delete')) {
+      const id = target.closest('.js-note-delete').dataset.id;
+      const note = state.notes.find((n) => n.Id === id);
+      if (!note) return;
+      const extra = (note.Attachments || []).length > 0
+        ? `\n\nVerranno eliminati anche i ${note.Attachments.length} allegati collegati.`
+        : '';
+      if (confirm(`Vuoi eliminare questo Post-IT?\n\n"${note.Title || note.Text}"${extra}`)) {
+        await storage.deleteNote(id);
+        await reloadData();
+      }
+      return;
+    }
+    if (target.closest('.js-note-att-open')) {
+      const btn = target.closest('.js-note-att-open');
+      const note = state.notes.find((n) => n.Id === btn.dataset.noteId);
+      const att = note?.Attachments?.find((a) => a.Id === btn.dataset.attId);
+      if (att) await openStoredFile(att.StoredRelativePath, att.FileName, 'notes');
+      return;
+    }
+    if (target.closest('.js-note-att-remove')) {
+      const btn = target.closest('.js-note-att-remove');
+      const note = state.notes.find((n) => n.Id === btn.dataset.noteId);
+      const att = note?.Attachments?.find((a) => a.Id === btn.dataset.attId);
+      if (att && confirm(`Vuoi eliminare l'allegato "${att.FileName}" da questo Post-IT?`)) {
+        await storage.removeNoteAttachment(note.Id, att.Id);
+        await reloadData();
+      }
+      return;
+    }
+    if (target.closest('.js-note-detail-att-remove')) {
+      const btn = target.closest('.js-note-detail-att-remove');
+      const note = state.notes.find((n) => n.Id === btn.dataset.noteId);
+      const att = note?.Attachments?.find((a) => a.Id === btn.dataset.attId);
+      if (att && confirm(`Vuoi eliminare l'allegato "${att.FileName}"?`)) {
+        await storage.removeNoteAttachment(note.Id, att.Id);
+        await reloadData();
+        const updated = state.notes.find((n) => n.Id === note.Id);
+        if (updated) renderNoteDetailAttachments(updated);
       }
       return;
     }
@@ -1633,6 +2130,31 @@ function bindEvents() {
     } else if (target.classList.contains('js-diary-done')) {
       await storage.setDiaryDone(target.dataset.id, target.checked);
       await reloadData();
+    } else if (target.classList.contains('js-note-done')) {
+      await storage.setNoteDone(target.dataset.id, target.checked);
+      await reloadData();
+    } else if (target.classList.contains('diary-inline-check')) {
+      const card = target.closest('.item-card');
+      const bodyEl = card?.querySelector('.diary-text');
+      const ownerType = target.dataset.ownerType || (card?.classList.contains('js-note-row') ? 'notes' : 'diary');
+      const ownerId = target.dataset.ownerId || card?.dataset.id;
+      if (!bodyEl || !ownerId) return;
+
+      const updatedHtml = serializeEditorHtml(bodyEl);
+      const updatedText = extractEditorPlainText(bodyEl);
+      if (ownerType === 'notes') {
+        const existing = state.notes.find((n) => n.Id === ownerId);
+        if (existing) {
+          await storage.updateNote({ ...existing, Text: updatedText, RichContentHtml: updatedHtml });
+          await reloadData();
+        }
+      } else {
+        const existing = state.diary.find((d) => d.Id === ownerId);
+        if (existing) {
+          await storage.updateDiaryEntry({ ...existing, Text: updatedText, RichContentHtml: updatedHtml });
+          await reloadData();
+        }
+      }
     } else if (target.classList.contains('js-import-json')) {
       const files = Array.from(target.files || []);
       if (!files.length) return;
@@ -1707,9 +2229,9 @@ function bindEvents() {
 
 // ===== DOCKING & AUTO-HIDE (Standalone PWA Window) =====
 
-const DOCK_SIDE_WIDTH = 440;
-const DOCK_BOTTOM_HEIGHT = 360;
-const COLLAPSED_STRIP_SIZE = 120; // Chrome standalone minimum width/height is ~100-136px
+const DOCK_SIDE_WIDTH = 500;
+const DOCK_BOTTOM_HEIGHT = 380;
+const EDGE_PEEK_PX = 28;
 let autoHideTimer = null;
 
 function isStandalonePwaWindow() {
@@ -1728,8 +2250,12 @@ function applyDockGeometry(collapsed = false) {
   els.collapsedEdgeStrip.classList.toggle('hidden', !state.isCollapsedEdge);
   els.appShell.classList.toggle('hidden', state.isCollapsedEdge);
 
+  els.collapsedEdgeStrip.classList.remove('edge-left', 'edge-right', 'edge-bottom', 'vertical');
   if (state.isCollapsedEdge) {
-    els.collapsedEdgeStrip.classList.toggle('vertical', mode === 'left' || mode === 'right');
+    els.collapsedEdgeStrip.classList.add(`edge-${mode}`);
+    if (mode === 'left' || mode === 'right') {
+      els.collapsedEdgeStrip.classList.add('vertical');
+    }
     els.collapsedEdgeLabel.textContent = mode === 'left'
       ? 'MemoBam ▶'
       : (mode === 'right' ? '◀ MemoBam' : '▲ MemoBam');
@@ -1747,17 +2273,23 @@ function applyDockGeometry(collapsed = false) {
     }
 
     if (mode === 'left') {
-      const w = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_SIDE_WIDTH, availW);
-      window.resizeTo(w, availH);
-      window.moveTo(availLeft, availTop);
+      const w = Math.min(DOCK_SIDE_WIDTH, availW);
+      if (!state.isCollapsedEdge) window.resizeTo(w, availH);
+      const actualW = window.outerWidth || w;
+      const targetX = state.isCollapsedEdge ? (availLeft - actualW + EDGE_PEEK_PX) : availLeft;
+      window.moveTo(targetX, availTop);
     } else if (mode === 'right') {
-      const w = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_SIDE_WIDTH, availW);
-      window.resizeTo(w, availH);
-      window.moveTo(availLeft + availW - w, availTop);
+      const w = Math.min(DOCK_SIDE_WIDTH, availW);
+      if (!state.isCollapsedEdge) window.resizeTo(w, availH);
+      const actualW = window.outerWidth || w;
+      const targetX = state.isCollapsedEdge ? (availLeft + availW - EDGE_PEEK_PX) : (availLeft + availW - actualW);
+      window.moveTo(targetX, availTop);
     } else if (mode === 'bottom') {
-      const h = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_BOTTOM_HEIGHT, availH);
-      window.resizeTo(availW, h);
-      window.moveTo(availLeft, availTop + availH - h);
+      const h = Math.min(DOCK_BOTTOM_HEIGHT, availH);
+      if (!state.isCollapsedEdge) window.resizeTo(availW, h);
+      const actualH = window.outerHeight || h;
+      const targetY = state.isCollapsedEdge ? (availTop + availH - EDGE_PEEK_PX) : (availTop + availH - actualH);
+      window.moveTo(availLeft, targetY);
     }
   } catch {
     // Ignore if browser restricts moveTo/resizeTo

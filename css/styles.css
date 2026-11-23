@@ -369,6 +369,21 @@ body {
   z-index: 999;
 }
 
+.collapsed-edge-strip.edge-right {
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+
+.collapsed-edge-strip.edge-left {
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+
+.collapsed-edge-strip.edge-bottom {
+  align-items: flex-start;
+  padding-top: 6px;
+}
+
 .collapsed-edge-strip.vertical span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
@@ -428,9 +443,19 @@ body {
   color: #5B21B6;
 }
 
+.btn-soft-green {
+  background: #DCFCE7;
+  color: #166534;
+}
+
 [data-theme="dark"] .btn-soft-purple {
   background: rgba(109, 40, 217, 0.28);
   color: #DDD6FE;
+}
+
+[data-theme="dark"] .btn-soft-green {
+  background: rgba(16, 185, 129, 0.24);
+  color: #6EE7B7;
 }
 
 [data-theme="dark"] .btn-soft-blue {
@@ -496,49 +521,39 @@ body {
   gap: 5px;
 }
 
-/* Quick Notes ("Note Pronte") Bar & Table Modal */
-.quick-notes-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-bottom: 5px;
-  border-bottom: 1px dashed var(--border);
+/* Quick Notes ("Note Pronte") Dropdown Menu & Table Modal */
+.quick-notes-menu-wrap {
+  position: relative;
 }
 
-.quick-notes-label {
-  font-size: 0.74rem;
-  font-weight: 700;
+.quick-notes-trigger {
   color: var(--accent);
-  white-space: nowrap;
-}
-
-.quick-notes-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  flex: 1;
-}
-
-.quick-note-chip {
-  background: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 0.74rem;
   font-weight: 600;
-  cursor: pointer;
 }
 
-.quick-note-chip:hover {
-  background: #DBEAFE;
+.quick-notes-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 240px;
+  max-width: 340px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 45;
 }
 
-[data-theme="dark"] .quick-note-chip {
-  background: rgba(37, 99, 235, 0.22);
-  border-color: #1E40AF;
-  color: #93C5FD;
+.quick-notes-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .quick-notes-add-row {
@@ -1355,7 +1370,7 @@ body {
 }
 
 .modal-card-xl {
-  max-width: 1020px;
+  max-width: 1180px;
 }
 
 .count-pill {
@@ -1376,7 +1391,7 @@ body {
 
 .parallel-results-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
   min-height: 260px;
   max-height: 64dvh;
@@ -1466,7 +1481,8 @@ body {
 }
 
 /* Document Preview Modal */
-#diaryDetailModal {
+#diaryDetailModal,
+#noteDetailModal {
   z-index: 60;
 }
 
@@ -1725,7 +1741,7 @@ body {
 
   .bottom-nav {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     background: var(--surface-solid);
     border-top: 1px solid var(--border);
     padding-bottom: env(safe-area-inset-bottom);

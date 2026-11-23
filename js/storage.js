@@ -7,12 +7,14 @@
 // 3. JSON Import & Export (archivio_memobam.json, diario_index.json, or combined backup)
 
 const DB_NAME = 'memobam_pwa_db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const LEGACY_RO_DB_NAME = 'memobam_pwa_readonly_db';
 const ARCHIVE_INDEX_FILE = 'archivio_memobam.json';
 const DIARY_DIR = 'Diario';
+const NOTES_DIR = 'Appunti';
 const ATTACHMENTS_DIR = 'Allegati';
 const DIARY_INDEX_FILE = 'diario_index.json';
+const NOTES_INDEX_FILE = 'appunti_index.json';
 const QUICK_NOTES_FILE = 'note_pronte.json';
 
 function generateId() {
@@ -77,6 +79,7 @@ function openDb() {
       const db = req.result;
       if (!db.objectStoreNames.contains('archive')) db.createObjectStore('archive', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('diary')) db.createObjectStore('diary', { keyPath: 'Id' });
+      if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('quickNotes')) db.createObjectStore('quickNotes', { keyPath: 'Id' });
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'path' });
       if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
@@ -794,17 +797,226 @@ export class MemoBamStorage {
     }
   }
 
+  // ===== NOTES ("Appunti") CRUD =====
+
+  async getNotes() {
+    if (this.dirHandle) {
+      try {
+        const notesDir = await this.dirHandle.getDirectoryHandle(NOTES_DIR);
+        const notes = await this._readJsonFile(notesDir, NOTES_INDEX_FILE, []);
+        return notes.sort((a, b) => new Date(b.UpdatedAt || b.CreatedAt) - new Date(a.UpdatedAt || a.CreatedAt));
+      } catch {
+        return [];
+      }
+    }
+    const notes = await idbTx(this.db, 'notes', 'readonly', (s) => s.getAll());
+    return (notes || []).sort((a, b) => new Date(b.UpdatedAt || b.CreatedAt) - new Date(a.UpdatedAt || a.CreatedAt));
+  }
+
+  async _saveNotesList(notes) {
+    if (!this.dirHandle) return;
+    if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+    const notesDir = await this._getOrCreateSubDir(this.dirHandle, [NOTES_DIR]);
+    await this._writeTextFile(notesDir, NOTES_INDEX_FILE, JSON.stringify(notes, null, 2));
+  }
+
+  async addNote(title, text, richContentHtml = null) {
+    const now = toLocalIsoString(new Date());
+    const cleanText = (text || '').trim();
+    const fallbackTitle = cleanText.split(/\r?\n/)[0]?.slice(0, 60) || 'Appunto';
+    const note = {
+      Id: generateId(),
+      Title: (title || '').trim() || fallbackTitle,
+      Text: cleanText,
+      RichContentHtml: richContentHtml || null,
+      CreatedAt: now,
+      UpdatedAt: now,
+      IsDone: true,
+      Attachments: []
+    };
+
+    if (this.dirHandle) {
+      const notes = await this.getNotes();
+      notes.push(note);
+      await this._saveNotesList(notes);
+    } else {
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(note));
+    }
+    return note;
+  }
+
+  async updateNote(updated) {
+    const now = toLocalIsoString(new Date());
+    if (this.dirHandle) {
+      const notes = await this.getNotes();
+      const target = notes.find((n) => n.Id === updated.Id);
+      if (!target) return;
+      target.Title = (updated.Title || '').trim() || target.Title;
+      target.Text = (updated.Text || '').trim();
+      if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      target.IsDone = Boolean(updated.IsDone);
+      target.UpdatedAt = now;
+      await this._saveNotesList(notes);
+    } else {
+      const target = await idbTx(this.db, 'notes', 'readonly', (s) => s.get(updated.Id));
+      if (!target) return;
+      target.Title = (updated.Title || '').trim() || target.Title;
+      target.Text = (updated.Text || '').trim();
+      if ('RichContentHtml' in updated) target.RichContentHtml = updated.RichContentHtml;
+      target.IsDone = Boolean(updated.IsDone);
+      target.UpdatedAt = now;
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(target));
+    }
+  }
+
+  async setNoteDone(id, isDone) {
+    if (this.dirHandle) {
+      const notes = await this.getNotes();
+      const target = notes.find((n) => n.Id === id);
+      if (!target) return;
+      target.IsDone = Boolean(isDone);
+      await this._saveNotesList(notes);
+    } else {
+      const target = await idbTx(this.db, 'notes', 'readonly', (s) => s.get(id));
+      if (!target) return;
+      target.IsDone = Boolean(isDone);
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(target));
+    }
+  }
+
+  async addNoteAttachments(noteId, files) {
+    const validFiles = Array.from(files || []).filter(Boolean);
+    if (validFiles.length === 0) return [];
+
+    const notes = await this.getNotes();
+    const target = notes.find((n) => n.Id === noteId);
+    if (!target) return [];
+
+    const dayKey = formatDateKey(new Date(target.CreatedAt || Date.now()));
+    const added = [];
+
+    for (const file of validFiles) {
+      const now = new Date();
+      const originalName = file.name;
+      let storedRelativePath = '';
+
+      if (this.dirHandle) {
+        if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+        const attDir = await this._getOrCreateSubDir(this.dirHandle, [NOTES_DIR, ATTACHMENTS_DIR, dayKey]);
+        const uniqueName = await this._getUniqueFileNameInDir(attDir, originalName, now);
+        const fh = await attDir.getFileHandle(uniqueName, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(file);
+        await writable.close();
+        storedRelativePath = `${ATTACHMENTS_DIR}\\${dayKey}\\${uniqueName}`;
+      } else {
+        const prefix = `${NOTES_DIR}\\${ATTACHMENTS_DIR}\\${dayKey}`;
+        storedRelativePath = await this._getUniquePathInIdb(prefix, originalName, now);
+        await idbTx(this.db, 'files', 'readwrite', (s) =>
+          s.put({
+            path: storedRelativePath,
+            blob: file,
+            name: originalName,
+            type: file.type || 'application/octet-stream',
+            size: file.size
+          })
+        );
+      }
+
+      const attachment = {
+        Id: generateId(),
+        FileName: originalName,
+        StoredRelativePath: storedRelativePath,
+        AddedAt: toLocalIsoString(now),
+        IsDirectory: false
+      };
+
+      target.Attachments = target.Attachments || [];
+      target.Attachments.push(attachment);
+      added.push(attachment);
+    }
+
+    if (this.dirHandle) {
+      await this._saveNotesList(notes);
+    } else {
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(target));
+    }
+
+    return added;
+  }
+
+  async removeNoteAttachment(noteId, attachmentId) {
+    const notes = await this.getNotes();
+    const target = notes.find((n) => n.Id === noteId);
+    if (!target) return;
+
+    const att = (target.Attachments || []).find((a) => a.Id === attachmentId);
+    if (!att) return;
+
+    if (this.dirHandle) {
+      if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+      try {
+        const notesDir = await this.dirHandle.getDirectoryHandle(NOTES_DIR);
+        await this._deleteFileByRelativePath(notesDir, att.StoredRelativePath);
+      } catch {
+        // Ignore if missing
+      }
+      target.Attachments = target.Attachments.filter((a) => a.Id !== attachmentId);
+      await this._saveNotesList(notes);
+    } else {
+      const idbKey = att.StoredRelativePath?.startsWith(`${NOTES_DIR}\\`)
+        ? att.StoredRelativePath
+        : `${NOTES_DIR}\\${att.StoredRelativePath}`;
+      await idbTx(this.db, 'files', 'readwrite', (s) => s.delete(idbKey));
+      target.Attachments = target.Attachments.filter((a) => a.Id !== attachmentId);
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.put(target));
+    }
+  }
+
+  async deleteNote(noteId) {
+    const notes = await this.getNotes();
+    const target = notes.find((n) => n.Id === noteId);
+    if (!target) return;
+
+    if (this.dirHandle) {
+      if (!this.folderWritable) throw new Error('Cartella collegata in sola lettura.');
+      try {
+        const notesDir = await this.dirHandle.getDirectoryHandle(NOTES_DIR);
+        for (const att of target.Attachments || []) {
+          try {
+            await this._deleteFileByRelativePath(notesDir, att.StoredRelativePath);
+          } catch {
+            // Ignore
+          }
+        }
+      } catch {
+        // Ignore
+      }
+      await this._saveNotesList(notes.filter((n) => n.Id !== noteId));
+    } else {
+      for (const att of target.Attachments || []) {
+        const idbKey = att.StoredRelativePath?.startsWith(`${NOTES_DIR}\\`)
+          ? att.StoredRelativePath
+          : `${NOTES_DIR}\\${att.StoredRelativePath}`;
+        await idbTx(this.db, 'files', 'readwrite', (s) => s.delete(idbKey));
+      }
+      await idbTx(this.db, 'notes', 'readwrite', (s) => s.delete(noteId));
+    }
+  }
+
   // ===== OPEN / RETRIEVE PHYSICAL FILE =====
 
-  async getStoredFileBlob(storedRelativePath, isDiaryAttachment = false) {
+  async getStoredFileBlob(storedRelativePath, scope = 'archive') {
     if (!storedRelativePath) return null;
+    const isDiary = scope === true || scope === 'diary';
+    const isNotes = scope === 'notes';
 
     if (this.dirHandle) {
       try {
         let base = this.dirHandle;
-        if (isDiaryAttachment) {
-          base = await this.dirHandle.getDirectoryHandle(DIARY_DIR);
-        }
+        if (isDiary) base = await this.dirHandle.getDirectoryHandle(DIARY_DIR);
+        else if (isNotes) base = await this.dirHandle.getDirectoryHandle(NOTES_DIR);
+
         const parts = storedRelativePath.split(/[\\/]+/).filter(Boolean);
         const fileName = parts.pop();
         let curr = base;
@@ -819,8 +1031,10 @@ export class MemoBamStorage {
     }
 
     const candidates = [storedRelativePath];
-    if (isDiaryAttachment && !storedRelativePath.startsWith(`${DIARY_DIR}\\`)) {
+    if (isDiary && !storedRelativePath.startsWith(`${DIARY_DIR}\\`)) {
       candidates.unshift(`${DIARY_DIR}\\${storedRelativePath}`);
+    } else if (isNotes && !storedRelativePath.startsWith(`${NOTES_DIR}\\`)) {
+      candidates.unshift(`${NOTES_DIR}\\${storedRelativePath}`);
     }
     for (const key of candidates) {
       const rec = await idbTx(this.db, 'files', 'readonly', (s) => s.get(key));
@@ -915,6 +1129,7 @@ export class MemoBamStorage {
   async clearLocalCache() {
     await idbTx(this.db, 'archive', 'readwrite', (s) => s.clear());
     await idbTx(this.db, 'diary', 'readwrite', (s) => s.clear());
+    await idbTx(this.db, 'notes', 'readwrite', (s) => s.clear());
     await idbTx(this.db, 'files', 'readwrite', (s) => s.clear());
   }
 }
