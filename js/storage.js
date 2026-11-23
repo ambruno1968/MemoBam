@@ -121,12 +121,17 @@ function openDb() {
 }
 
 function idbTx(db, storeName, mode, fn) {
+  if (!db) return Promise.resolve(null);
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
-    const req = fn(store);
-    tx.oncomplete = () => resolve(req?.result);
-    tx.onerror = () => reject(tx.error || req?.error);
+    try {
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      const req = fn(store);
+      tx.oncomplete = () => resolve(req?.result);
+      tx.onerror = () => reject(tx.error || req?.error);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
@@ -274,7 +279,12 @@ export class MemoBamStorage {
     this.savedFolderName = handle.name;
     this.folderWritable = writable;
     localStorage.setItem('memobam_last_folder_name', handle.name);
-    await idbTx(this.db, 'settings', 'readwrite', (s) => s.put({ key: 'dirHandle', value: handle }));
+    try {
+      if (!this.db) this.db = await openDb();
+      await idbTx(this.db, 'settings', 'readwrite', (s) => s.put({ key: 'dirHandle', value: handle }));
+    } catch {
+      // Folder is connected even if IndexedDB persistence is temporarily unavailable
+    }
     return { name: handle.name, writable };
   }
 

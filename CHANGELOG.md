@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.2] - 2026-11-23
+
+### Risolto
+- **Errore `Cannot read properties of null (reading 'transaction')` su Collega Cartella**: reso sicuro `idbTx()` quando `this.db` è `null` e garantito il collegamento della cartella in `connectFolder()` anche se IndexedDB non è disponibile al momento.
+
 ## [1.9.1] - 2026-11-23
 
 ### Risolto
