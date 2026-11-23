@@ -24,7 +24,7 @@
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v1.6.0</span>
+            <span class="version-label">v1.7.0</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -378,6 +378,27 @@
       <div class="modal-footer">
         <button id="closeGlobalPopupFooterBtn" type="button" class="btn btn-neutral">Chiudi</button>
       </div>
+    </div>
+  </div>
+
+  <!-- File Preview Modal (PDF, Word, Excel, TXT, HTML, Images) -->
+  <div id="filePreviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="filePreviewTitle">
+    <div class="modal-card modal-card-xl preview-modal-card">
+      <div class="modal-header">
+        <div class="detail-header-info">
+          <h3 id="filePreviewTitle">📄 Anteprima Documento</h3>
+          <span id="filePreviewSubtitle" class="detail-timestamp"></span>
+        </div>
+        <div class="preview-header-actions">
+          <button id="previewOpenSystemBtn" type="button" class="btn btn-primary btn-sm"
+            title="Apri con l'applicazione predefinita del sistema">🚀 Apri con app</button>
+          <button id="previewSaveFileBtn" type="button" class="btn btn-neutral btn-sm"
+            title="Salva con nome scegliendo il percorso">💾 Salva con nome</button>
+          <button id="closeFilePreviewTopBtn" type="button" class="btn btn-neutral btn-sm">✕ Chiudi</button>
+        </div>
+      </div>
+      <div id="filePreviewBody" class="modal-body preview-modal-body"></div>
     </div>
   </div>
 

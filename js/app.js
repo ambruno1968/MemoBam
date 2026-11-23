@@ -1,4 +1,5 @@
 import { MemoBamStorage } from './storage.js';
+import { renderFilePreview, getTypedBlob, getExtension } from './preview.js';
 
 const LIGHT_PASTEL = [
   { bg: '#EEF2FF', border: '#C7D2FE' },
@@ -151,6 +152,14 @@ const els = {
   popupDiaryBadge: document.getElementById('popupDiaryBadge'),
   popupArchiveList: document.getElementById('popupArchiveList'),
   popupDiaryList: document.getElementById('popupDiaryList'),
+
+  filePreviewModal: document.getElementById('filePreviewModal'),
+  filePreviewTitle: document.getElementById('filePreviewTitle'),
+  filePreviewSubtitle: document.getElementById('filePreviewSubtitle'),
+  previewOpenSystemBtn: document.getElementById('previewOpenSystemBtn'),
+  previewSaveFileBtn: document.getElementById('previewSaveFileBtn'),
+  closeFilePreviewTopBtn: document.getElementById('closeFilePreviewTopBtn'),
+  filePreviewBody: document.getElementById('filePreviewBody'),
 
   entryAttachInput: document.getElementById('entryAttachInput'),
   toast: document.getElementById('toast')
@@ -310,6 +319,13 @@ function updateStorageBadge() {
     els.connectFolderLabel.textContent = storage.folderName;
     els.fixedPathText.textContent = `Percorso: 📁 ${storage.folderName}`;
     els.fixedPathText.title = `${storage.folderName} (${modeLabel})`;
+  } else if (storage.getPendingReconnectFolderName()) {
+    const remembered = storage.getPendingReconnectFolderName();
+    els.storageBadge.textContent = `📁 ${remembered} (clicca 📁 per riconnettere)`;
+    els.storageBadge.classList.remove('folder-active');
+    els.connectFolderLabel.textContent = `Riconnetti ${remembered}`;
+    els.fixedPathText.textContent = `Percorso memorizzato: 📁 ${remembered}`;
+    els.fixedPathText.title = `Ultima cartella collegata: ${remembered} — clicca per riconnettere`;
   } else {
     els.storageBadge.textContent = 'Cache Locale (Offline)';
     els.storageBadge.classList.remove('folder-active');
@@ -738,21 +754,49 @@ async function handleDroppedOrSelectedFiles(fileList) {
   }
 }
 
+let currentPreview = {
+  blob: null,
+  fileName: '',
+  objectUrl: null
+};
+
+function closeFilePreview() {
+  els.filePreviewModal.classList.add('hidden');
+  els.filePreviewBody.innerHTML = '';
+  if (currentPreview.objectUrl) {
+    URL.revokeObjectURL(currentPreview.objectUrl);
+  }
+  currentPreview = { blob: null, fileName: '', objectUrl: null };
+}
+
+function triggerFileDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName || 'documento';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = false) {
   const blob = await storage.getStoredFileBlob(storedRelativePath, isDiaryAttachment);
   if (!blob) {
     showToast(`File non disponibile localmente (${storedRelativePath || fileName})`);
     return;
   }
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank', 'noopener');
-  if (!win) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName || 'documento';
-    a.click();
+
+  if (currentPreview.objectUrl) {
+    URL.revokeObjectURL(currentPreview.objectUrl);
   }
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+
+  const ext = getExtension(fileName);
+  els.filePreviewTitle.textContent = `📄 ${fileName || 'Anteprima Documento'}`;
+  els.filePreviewSubtitle.textContent = `${ext ? ext.toUpperCase() + ' • ' : ''}${formatBytes(blob.size)}`;
+  els.filePreviewBody.innerHTML = `<div class="empty-state">Caricamento anteprima...</div>`;
+  els.filePreviewModal.classList.remove('hidden');
+
+  const { objectUrl } = await renderFilePreview(blob, fileName, els.filePreviewBody);
+  currentPreview = { blob, fileName, objectUrl };
 }
 
 function downloadJsonFile(filename, data) {
@@ -963,8 +1007,70 @@ function bindEvents() {
     if (e.target === els.globalSearchPopup) els.globalSearchPopup.classList.add('hidden');
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !els.globalSearchPopup.classList.contains('hidden')) {
-      els.globalSearchPopup.classList.add('hidden');
+    if (e.key === 'Escape') {
+      if (!els.filePreviewModal.classList.contains('hidden')) closeFilePreview();
+      else if (!els.diaryDetailModal.classList.contains('hidden')) els.diaryDetailModal.classList.add('hidden');
+      else if (!els.globalSearchPopup.classList.contains('hidden')) els.globalSearchPopup.classList.add('hidden');
+    }
+  });
+
+  // Document Preview Modal actions
+  els.closeFilePreviewTopBtn.addEventListener('click', closeFilePreview);
+  els.filePreviewModal.addEventListener('click', (e) => {
+    if (e.target === els.filePreviewModal) closeFilePreview();
+  });
+  els.previewSaveFileBtn.addEventListener('click', async () => {
+    if (!currentPreview.blob) return;
+    if (typeof window.showSaveFilePicker === 'function') {
+      try {
+        const ext = getExtension(currentPreview.fileName);
+        const typedBlob = getTypedBlob(currentPreview.blob, currentPreview.fileName);
+        const options = { suggestedName: currentPreview.fileName || 'documento' };
+        if (ext && typedBlob.type && typedBlob.type !== 'application/octet-stream') {
+          options.types = [{
+            description: `File ${ext.toUpperCase()}`,
+            accept: { [typedBlob.type.split(';')[0]]: [`.${ext}`] }
+          }];
+        }
+        const handle = await window.showSaveFilePicker(options);
+        const writable = await handle.createWritable();
+        await writable.write(currentPreview.blob);
+        await writable.close();
+        showToast(`File salvato: "${handle.name}"`);
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+    triggerFileDownload(currentPreview.blob, currentPreview.fileName);
+    showToast(`Salvataggio di "${currentPreview.fileName}" avviato`);
+  });
+  els.previewOpenSystemBtn.addEventListener('click', async () => {
+    if (!currentPreview.blob) return;
+    const typedBlob = getTypedBlob(currentPreview.blob, currentPreview.fileName);
+    const isMobileOrChromeOs = navigator.userAgentData?.mobile || /Android|iPhone|iPad|CrOS/i.test(navigator.userAgent);
+
+    if (isMobileOrChromeOs) {
+      try {
+        const fileObj = new File([typedBlob], currentPreview.fileName, { type: typedBlob.type });
+        if (navigator.canShare?.({ files: [fileObj] })) {
+          await navigator.share({ files: [fileObj], title: currentPreview.fileName });
+          return;
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    const ext = getExtension(currentPreview.fileName);
+    const browserInline = ['pdf', 'txt', 'html', 'htm', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'json', 'xml'].includes(ext);
+    if (browserInline) {
+      const url = URL.createObjectURL(typedBlob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } else {
+      triggerFileDownload(typedBlob, currentPreview.fileName);
+      showToast(`"${currentPreview.fileName}" scaricato: cliccalo nei Download (attiva "Apri sempre" per lanciarlo in automatico).`);
     }
   });
 
@@ -1108,6 +1214,15 @@ function bindEvents() {
   // Folder & Settings modals
   const connectFolderAction = async () => {
     try {
+      if (!storage.isFolderConnected() && storage.getPendingReconnectFolderName()) {
+        const ok = await storage.reconnectSavedFolder();
+        if (ok) {
+          await reloadData();
+          await renderSettingsPanels();
+          showToast(`Cartella riconnessa: ${storage.folderName}`);
+          return;
+        }
+      }
       const res = await storage.connectFolder();
       await reloadData();
       await renderSettingsPanels();
@@ -1233,15 +1348,11 @@ function bindEvents() {
   document.body.addEventListener('click', async (e) => {
     const target = e.target;
 
-    // Global search popup row clicks (open matching item)
+    // Global search popup row clicks (open matching item without closing popup)
     if (target.closest('.js-popup-archive-row')) {
       const id = target.closest('.js-popup-archive-row').dataset.id;
       const item = getUnifiedArchive().find((i) => i.Id === id);
-      els.globalSearchPopup.classList.add('hidden');
       if (item) {
-        switchSection('archive');
-        const card = els.archiveList.querySelector(`.item-card[data-id="${id}"]`);
-        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await openStoredFile(item.StoredRelativePath, item.OriginalFileName, item._isDiaryAttachment);
       }
       return;
@@ -1249,14 +1360,7 @@ function bindEvents() {
     if (target.closest('.js-popup-diary-row')) {
       const id = target.closest('.js-popup-diary-row').dataset.id;
       const entry = state.diary.find((d) => d.Id === id);
-      els.globalSearchPopup.classList.add('hidden');
       if (entry) {
-        state.diaryDateFilter = (entry.Timestamp || '').slice(0, 10);
-        els.diaryDateInput.value = state.diaryDateFilter;
-        switchSection('diary');
-        renderDiary();
-        const card = els.diaryList.querySelector(`.item-card[data-id="${id}"]`);
-        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         openDiaryDetailModal(entry);
       }
       return;

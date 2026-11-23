@@ -8,5 +8,9 @@ Queste regole si applicano automaticamente a tutte le sessioni e chat aperte su 
 - Se il working tree è già pulito e allineato con `origin/main`, annota l'ultimo commit come punto di ripristino prima di procedere.
 
 ## 2. Pubblicazione e aggiornamento versione solo su richiesta esplicita
-- **NON aggiornare la versione** (`sw.js`, `README.md`, `CHANGELOG.md`, tag Git) e **NON pubblicare/pushare** modifiche su GitHub a meno che l'utente non lo richieda esplicitamente.
-- Quando l'utente richiede esplicitamente un rilascio o una pubblicazione, incrementa la versione secondo **Semantic Versioning (SemVer)** e aggiorna `sw.js`, `README.md` e `CHANGELOG.md`.
+- **NON aggiornare la versione** (`index.html`, `sw.js`, `README.md`, `CHANGELOG.md`, tag Git) e **NON pubblicare/pushare** modifiche su GitHub a meno che l'utente non lo richieda esplicitamente.
+- **Ogni pubblicazione** (solo quando espressamente richiesta dall'utente) deve seguire questo procedimento standard:
+  1. Incrementare la versione secondo **Semantic Versioning (SemVer)** (`MAJOR.MINOR.PATCH`).
+  2. Aggiornare la versione in **`index.html`** (`version-label`), **`sw.js`** (`CACHE_NAME`), **`README.md`** e **`CHANGELOG.md`** (con data e riepilogo delle modifiche).
+  3. Verificare la sintassi dei file JS/JSON modificati (`node --check`).
+  4. Eseguire `git add`, `git commit` e `git push origin main` su GitHub solo su esplicita richiesta di pubblicazione.

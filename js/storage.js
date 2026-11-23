@@ -143,6 +143,7 @@ export class MemoBamStorage {
     this.db = null;
     this.dirHandle = null;
     this.folderName = null;
+    this.savedFolderName = localStorage.getItem('memobam_last_folder_name') || null;
     this.folderWritable = false;
   }
 
@@ -152,6 +153,8 @@ export class MemoBamStorage {
 
     const saved = await idbTx(this.db, 'settings', 'readonly', (s) => s.get('dirHandle'));
     if (saved?.value) {
+      this.savedFolderName = saved.value.name;
+      localStorage.setItem('memobam_last_folder_name', saved.value.name);
       try {
         const rwPerm = await saved.value.queryPermission({ mode: 'readwrite' });
         if (rwPerm === 'granted') {
@@ -179,6 +182,10 @@ export class MemoBamStorage {
 
   isFolderConnected() {
     return Boolean(this.dirHandle);
+  }
+
+  getPendingReconnectFolderName() {
+    return !this.dirHandle ? this.savedFolderName : null;
   }
 
   isReadOnlyFolder() {
@@ -229,7 +236,9 @@ export class MemoBamStorage {
     }
     this.dirHandle = handle;
     this.folderName = handle.name;
+    this.savedFolderName = handle.name;
     this.folderWritable = writable;
+    localStorage.setItem('memobam_last_folder_name', handle.name);
     await idbTx(this.db, 'settings', 'readwrite', (s) => s.put({ key: 'dirHandle', value: handle }));
     return { name: handle.name, writable };
   }
@@ -237,7 +246,9 @@ export class MemoBamStorage {
   async disconnectFolder() {
     this.dirHandle = null;
     this.folderName = null;
+    this.savedFolderName = null;
     this.folderWritable = false;
+    localStorage.removeItem('memobam_last_folder_name');
     await idbTx(this.db, 'settings', 'readwrite', (s) => s.delete('dirHandle'));
   }
 

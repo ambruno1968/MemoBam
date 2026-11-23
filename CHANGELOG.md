@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.7.0] - 2026-11-23
+
+### Aggiunto
+- **Anteprima integrata per Archivio e Allegati Diario** (`js/preview.js`): finestra dedicata per visualizzare inline **PDF**, **Word** (`.docx`), **Excel / CSV** (`.xlsx`, `.xlsm`, `.csv` con schede multi-foglio), **TXT/JSON/MD/XML**, **HTML** e **Immagini** senza dipendenze esterne.
+- **Azioni dalla finestra di anteprima**: pulsanti **`🚀 Apri con app`** e **`💾 Salva con nome`** (`showSaveFilePicker` con scelta manuale di percorso e nome, più fallback download).
+- **Persistenza ultima cartella collegata**: memorizzazione automatica dell'ultimo nome/handle cartella (`savedFolderName`) con riconnessione in 1 clic dalla barra superiore.
+
+### Migliorato
+- **Popup Ricerca Parallela persistente**: il popup rimane aperto sopra l'app (`z-index: 50`) e sotto dettaglio Diario (`z-index: 60`) / anteprima Documento (`z-index: 70`), chiudendosi solo su comando esplicito dell'utente.
+
 ## [1.6.0] - 2026-11-23
 
 ### Aggiunto
