@@ -1237,7 +1237,7 @@ async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = 
   els.filePreviewModal.classList.remove('hidden');
 
   const { objectUrl } = await renderFilePreview(blob, fileName, els.filePreviewBody);
-  currentPreview = { blob, fileName, objectUrl };
+  currentPreview = { blob, fileName, objectUrl, ownerType, ownerId };
 }
 
 function downloadJsonFile(filename, data) {
