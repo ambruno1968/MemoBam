@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.1] - 2026-11-23
+
+### Risolto
+- **Blocco avvio su aggiornamento IndexedDB**: eseguito `bindEvents()` prima di `storage.init()` in `js/app.js` con gestione `try/catch`, e aggiunti `onversionchange`, `onblocked` e timeout di sicurezza in `openDb()` (`js/storage.js`) così menù, tema, cartella e impostazioni risultano sempre reattivi anche con più schede aperte.
+
 ## [1.9.0] - 2026-11-23
 
 ### Aggiunto

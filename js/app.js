@@ -2322,7 +2322,6 @@ function updateDockButtonsUI() {
 
 async function bootstrap() {
   initTheme();
-  await storage.init();
   bindEvents();
   updateDockButtonsUI();
   if (state.dockMode !== 'normal' && isStandalonePwaWindow()) {
@@ -2331,13 +2330,19 @@ async function bootstrap() {
 
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab');
-  switchSection(tab === 'diary' ? 'diary' : 'archive');
-
-  await reloadData();
-  await renderSettingsPanels();
+  switchSection(tab === 'diary' ? 'diary' : (tab === 'notes' ? 'notes' : 'archive'));
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { });
+  }
+
+  try {
+    await storage.init();
+    await reloadData();
+    await renderSettingsPanels();
+  } catch (err) {
+    console.error('MemoBam init error:', err);
+    showToast(err?.message || 'Errore inizializzazione archivio locale');
   }
 }
 

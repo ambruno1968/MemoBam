@@ -74,6 +74,14 @@ function splitFileName(fileName) {
 
 function openDb() {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('Timeout apertura database locale (chiudi altre schede di MemoBam se aperte).'));
+      }
+    }, 3500);
+
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -84,8 +92,31 @@ function openDb() {
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'path' });
       if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onblocked = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error('Database bloccato da un\'altra scheda aperta di MemoBam.'));
+      }
+    };
+    req.onsuccess = () => {
+      if (settled) {
+        req.result.close();
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      const db = req.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
+    req.onerror = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(req.error);
+      }
+    };
   });
 }
 
@@ -196,6 +227,7 @@ export class MemoBamStorage {
   }
 
   async hasSavedFolderHandle() {
+    if (!this.db) return false;
     const saved = await idbTx(this.db, 'settings', 'readonly', (s) => s.get('dirHandle'));
     return Boolean(saved?.value);
   }
