@@ -1,11 +1,7 @@
 {
-	"folders": [
-		{
-			"path": "../MemoBam-PWA"
-		},
+    "folders": [
 		{
 			"path": "."
 		}
-	],
-	"settings": {}
+	]
 }

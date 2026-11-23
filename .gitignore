@@ -1,10 +1,9 @@
-# .NET / Visual Studio build outputs
-bin/
-obj/
+# Editor / OS
 .vs/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
 *.user
 *.suo
 *.cache
-*.log
-publish/
-dist/

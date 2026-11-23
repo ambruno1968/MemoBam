@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.6.0] - 2026-11-23
+
+### Aggiunto
+- **PWA completa (lettura e scrittura)**: migrato il progetto principale su PWA con supporto File System Access API (`readwrite`) e IndexedDB offline, eliminando il progetto desktop Windows.
+- **Ricerca globale superiore con popup parallelo**: barra di ricerca unificata in alto che apre un popup con i risultati affiancati di **Archivio Documenti** e **Diario / Agenda** (clic per aprire direttamente la corrispondenza, pulsante `Chiudi` dedicato).
+- **Note pronte per il Diario**: gestione su tabella separata (`Diario/note_pronte.json` e IndexedDB `quickNotes`) con inserimento rapido tramite chip (es. `"Listino cavi aggiornato"`).
+- **Service Worker network-first (`memobam-pwa-v1.6.0`)**: aggiornamento automatico immediato quando online con fallback offline.
+
 ## [1.5.0] - 2026-11-20
 
 ### Aggiunto

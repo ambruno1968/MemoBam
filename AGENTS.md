@@ -7,6 +7,6 @@ Queste regole si applicano automaticamente a tutte le sessioni e chat aperte su 
 - Se sono presenti modifiche non ancora committate o non pushate, crea prima un **commit di ripristino** e fai **push su GitHub (`origin main`)** in modo che lo stato precedente sia sempre recuperabile.
 - Se il working tree è già pulito e allineato con `origin/main`, annota l'ultimo commit come punto di ripristino prima di procedere.
 
-## 2. Compilazione, pubblicazione e aggiornamento versione solo su richiesta esplicita
-- **NON compilare** (`dotnet build`, `dotnet publish`), **NON aggiornare la versione** (`MemoBam.csproj`, `CHANGELOG.md`, tag Git) e **NON pubblicare/pushare** modifiche su GitHub a meno che l'utente non lo richieda esplicitamente.
-- Quando l'utente richiede esplicitamente un rilascio o una pubblicazione, incrementa la versione secondo **Semantic Versioning (SemVer)** e aggiorna `MemoBam.csproj` e `CHANGELOG.md`.
+## 2. Pubblicazione e aggiornamento versione solo su richiesta esplicita
+- **NON aggiornare la versione** (`sw.js`, `README.md`, `CHANGELOG.md`, tag Git) e **NON pubblicare/pushare** modifiche su GitHub a meno che l'utente non lo richieda esplicitamente.
+- Quando l'utente richiede esplicitamente un rilascio o una pubblicazione, incrementa la versione secondo **Semantic Versioning (SemVer)** e aggiorna `sw.js`, `README.md` e `CHANGELOG.md`.

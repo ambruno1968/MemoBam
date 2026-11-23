@@ -1,25 +1,28 @@
-# MemoBam
+# MemoBam PWA
 
-Applicazione desktop Windows (WPF / .NET 10) per archiviare fisicamente documenti e lavori eseguiti tramite Drag & Drop e tenere un diario giornaliero delle attività svolte.
+Applicazione **PWA completa** (**v1.6.0**) per gestire **Archivio Documenti** e **Diario Giornaliero** su **PC**, **ChromeOS** e **Smartphone**.
 
-## Funzionalità principali
+## Caratteristiche principali
 
-- **Drag & Drop immediato**: trascina file singoli, multipli o cartelle dalla Scrivania o da Esplora File nella zona dedicata (in modalità *Copia* sicura di default o *Sposta*).
-- **Schede con data e ora**: ogni documento archiviato genera una scheda con titolo modificabile, note, dimensione, data (`dd/MM/yyyy`) e ora (`HH:mm:ss`).
-- **Ricerca veloce**: cerca istantaneamente per titolo, nome file, note, data o ora, oppure filtra per giorno tramite calendario.
-- **Diario Giornaliero**: registra rapidamente le attività fatte durante la giornata nella cartella dedicata `Diario\`, con data e ora automatiche e sincronizzazione in file Markdown (`Diario_YYYY-MM-DD.md`).
-- **Ancoraggio e modalità desktop**:
-  - `Finestra`, `⬇ Basso`, `⬅ Sx`, `➡ Dx` (con modalità `👁️ Scomparsa` automatica sui bordi).
-  - `📌 Sfondo`: lascia visibile e semitrasparente il solo riquadro Drag & Drop ancorato sullo sfondo e apre la finestra completa al passaggio del mouse o al trascinamento di un file.
-- **Percorso personalizzabile**: cartella principale configurabile tramite il pulsante `Cambia...` (salvata in `%LocalAppData%\MemoBam\settings.json`).
+- **Archivio Documenti Drag & Drop**: trascinamento o selezione di file con titolo personalizzato e note opzionali, data (`dd/MM/yyyy`) e ora (`HH:mm:ss`) automatiche, apertura file, modifica titolo/note ed eliminazione con conferma.
+- **Diario Giornaliero**: selezione automatica del giorno odierno, pulsanti `Oggi` / `Tutti i giorni`, ricerca multi-giorno, toolbar di formattazione (`B`, `I`, `• Elenco`, `☑ Spunta` secondaria non ripetibile sulla stessa riga), finestra di dettaglio (`Apri`), allegati in bozza e su righe esistenti (con drag & drop diretto sulla riga), colori pastello alternati.
+- **Spunta "Fatto" e Banner "Da terminare"**: casella `Fatto` su ogni scheda e riga del diario, evidenziazione in ambra per gli elementi in sospeso e barra di avviso in alto con elenco espandibile e pulsanti rapidi **Apri** e **✓ Fatto**.
+- **Filtro allegati Diario in Archivio**: spunta **`Escludi allegati provenienti dal Diario`** attiva di default.
+- **Tema Chiaro / Scuro** (`🌙 Scuro` / `☀️ Chiaro`) e filigrana **MemoBam** sullo sfondo.
+- **Origine Dati**:
+  - **Collega Cartella (ChromeOS / Desktop Chrome / Edge)**: lettura e scrittura diretta nella cartella `MemoBam` (`archivio_memobam.json`, sottocartelle `YYYY-MM`, `Diario/diario_index.json`, `Diario/Allegati/YYYY-MM-DD`, `Diario/Diario_YYYY-MM-DD.md`).
+  - **Archiviazione Offline Locale (IndexedDB)**: salvataggio completo di schede, diario e file su smartphone e browser senza File System Access API, con Importa/Esporta JSON.
 
-## Requisiti e compilazione
-
-- Windows 10 / 11
-- [.NET 10 SDK](https://dotnet.microsoft.com/)
+## Avvio in locale (porta dedicata `5187`)
 
 ```powershell
-dotnet build -c Release
+cd d:\Repository\MemoBam
+.\start-pwa.ps1
 ```
 
-L'eseguibile viene generato in `bin/Release/net10.0-windows/MemoBam.exe`.
+Apri `http://localhost:5187` nel browser.
+
+## Pubblicazione
+
+Pubblicata su **GitHub Pages** dal repository `https://github.com/ambruno1968/MemoBam` (branch `main`, root `/`):
+- URL PWA: `https://ambruno1968.github.io/MemoBam/`
