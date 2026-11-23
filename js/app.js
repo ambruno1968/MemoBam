@@ -42,10 +42,19 @@ const state = {
   pendingAttachEntryId: null,
   lastArchiveCount: 0,
   lastDiaryCount: 0,
-  deferredInstallPrompt: null
+  deferredInstallPrompt: null,
+  dockMode: localStorage.getItem('memobam_dock_mode') || 'normal',
+  autoHide: localStorage.getItem('memobam_auto_hide') === 'true',
+  isCollapsedEdge: false
 };
 
 const els = {
+  appShell: document.getElementById('appShell'),
+  collapsedEdgeStrip: document.getElementById('collapsedEdgeStrip'),
+  collapsedEdgeLabel: document.getElementById('collapsedEdgeLabel'),
+  topbarMenuBtn: document.getElementById('topbarMenuBtn'),
+  topbarMenuDropdown: document.getElementById('topbarMenuDropdown'),
+  autoHideToggleBtn: document.getElementById('autoHideToggleBtn'),
   storageBadge: document.getElementById('storageBadge'),
   totalCountBadge: document.getElementById('totalCountBadge'),
   connectFolderBtn: document.getElementById('connectFolderBtn'),
@@ -53,6 +62,12 @@ const els = {
   installBtn: document.getElementById('installBtn'),
   themeToggleBtn: document.getElementById('themeToggleBtn'),
   settingsOpenBtn: document.getElementById('settingsOpenBtn'),
+  creditsBtn: document.getElementById('creditsBtn'),
+
+  creditsModal: document.getElementById('creditsModal'),
+  closeCreditsModalBtn: document.getElementById('closeCreditsModalBtn'),
+  closeCreditsFooterBtn: document.getElementById('closeCreditsFooterBtn'),
+  copyPwaUrlBtn: document.getElementById('copyPwaUrlBtn'),
 
   globalSearchInput: document.getElementById('globalSearchInput'),
   globalDateInput: document.getElementById('globalDateInput'),
@@ -321,11 +336,11 @@ function updateStorageBadge() {
     els.fixedPathText.title = `${storage.folderName} (${modeLabel})`;
   } else if (storage.getPendingReconnectFolderName()) {
     const remembered = storage.getPendingReconnectFolderName();
-    els.storageBadge.textContent = `📁 ${remembered} (clicca 📁 per riconnettere)`;
+    els.storageBadge.textContent = `📁 ${remembered}`;
     els.storageBadge.classList.remove('folder-active');
     els.connectFolderLabel.textContent = `Riconnetti ${remembered}`;
     els.fixedPathText.textContent = `Percorso memorizzato: 📁 ${remembered}`;
-    els.fixedPathText.title = `Ultima cartella collegata: ${remembered} — clicca per riconnettere`;
+    els.fixedPathText.title = `Ultima cartella collegata: ${remembered}`;
   } else {
     els.storageBadge.textContent = 'Cache Locale (Offline)';
     els.storageBadge.classList.remove('folder-active');
@@ -1008,9 +1023,44 @@ function bindEvents() {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!els.filePreviewModal.classList.contains('hidden')) closeFilePreview();
+      if (!els.topbarMenuDropdown.classList.contains('hidden')) els.topbarMenuDropdown.classList.add('hidden');
+      else if (!els.filePreviewModal.classList.contains('hidden')) closeFilePreview();
       else if (!els.diaryDetailModal.classList.contains('hidden')) els.diaryDetailModal.classList.add('hidden');
+      else if (!els.creditsModal.classList.contains('hidden')) els.creditsModal.classList.add('hidden');
       else if (!els.globalSearchPopup.classList.contains('hidden')) els.globalSearchPopup.classList.add('hidden');
+    }
+  });
+
+  // Left Topbar Menu Dropdown
+  els.topbarMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = els.topbarMenuDropdown.classList.toggle('hidden');
+    els.topbarMenuBtn.setAttribute('aria-expanded', String(!isHidden));
+  });
+  document.addEventListener('click', (e) => {
+    if (!els.topbarMenuDropdown.classList.contains('hidden') && !e.target.closest('.topbar-menu-wrap')) {
+      els.topbarMenuDropdown.classList.add('hidden');
+      els.topbarMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Credits & QR Code Modal
+  els.creditsBtn.addEventListener('click', () => {
+    els.topbarMenuDropdown.classList.add('hidden');
+    els.creditsModal.classList.remove('hidden');
+  });
+  els.closeCreditsModalBtn.addEventListener('click', () => els.creditsModal.classList.add('hidden'));
+  els.closeCreditsFooterBtn.addEventListener('click', () => els.creditsModal.classList.add('hidden'));
+  els.creditsModal.addEventListener('click', (e) => {
+    if (e.target === els.creditsModal) els.creditsModal.classList.add('hidden');
+  });
+  els.copyPwaUrlBtn.addEventListener('click', async () => {
+    const url = 'https://ambruno1968.github.io/MemoBam/';
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Link PWA copiato negli appunti!');
+    } catch {
+      showToast(url);
     }
   });
 
@@ -1617,6 +1667,123 @@ function bindEvents() {
     state.deferredInstallPrompt = null;
     els.installBtn.classList.add('hidden');
   });
+
+  // Docking & Auto-Hide controls
+  document.querySelectorAll('.dock-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      els.topbarMenuDropdown.classList.add('hidden');
+      state.dockMode = btn.dataset.dock;
+      localStorage.setItem('memobam_dock_mode', state.dockMode);
+      updateDockButtonsUI();
+      if (state.dockMode !== 'normal' && !isStandalonePwaWindow()) {
+        showToast('Per ancorare ai bordi Sx/Dx/Basso, apri MemoBam come App PWA installata.');
+      }
+      applyDockGeometry(false);
+    });
+  });
+
+  els.autoHideToggleBtn.addEventListener('click', () => {
+    state.autoHide = !state.autoHide;
+    localStorage.setItem('memobam_auto_hide', String(state.autoHide));
+    updateDockButtonsUI();
+    if (state.autoHide && state.dockMode === 'normal') {
+      showToast('Seleziona ⬅ Sx, ➡ Dx o ⬇ Basso per usare la scomparsa automatica.');
+    } else if (!state.autoHide) {
+      expandFromAutoHide();
+    }
+  });
+
+  document.addEventListener('mouseleave', () => scheduleAutoHideCollapse());
+  window.addEventListener('blur', () => scheduleAutoHideCollapse());
+  document.addEventListener('mouseenter', () => expandFromAutoHide());
+  document.addEventListener('dragenter', () => expandFromAutoHide());
+  els.collapsedEdgeStrip.addEventListener('mouseenter', () => expandFromAutoHide());
+  els.collapsedEdgeStrip.addEventListener('click', () => expandFromAutoHide());
+  els.collapsedEdgeStrip.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    expandFromAutoHide();
+  });
+}
+
+// ===== DOCKING & AUTO-HIDE (Standalone PWA Window) =====
+
+const DOCK_SIDE_WIDTH = 440;
+const DOCK_BOTTOM_HEIGHT = 360;
+const COLLAPSED_STRIP_SIZE = 120; // Chrome standalone minimum width/height is ~100-136px
+let autoHideTimer = null;
+
+function isStandalonePwaWindow() {
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function applyDockGeometry(collapsed = false) {
+  const mode = state.dockMode;
+  const s = window.screen;
+  const availLeft = s.availLeft ?? 0;
+  const availTop = s.availTop ?? 0;
+  const availW = s.availWidth || window.innerWidth;
+  const availH = s.availHeight || window.innerHeight;
+
+  state.isCollapsedEdge = collapsed && mode !== 'normal' && state.autoHide;
+  els.collapsedEdgeStrip.classList.toggle('hidden', !state.isCollapsedEdge);
+  els.appShell.classList.toggle('hidden', state.isCollapsedEdge);
+
+  if (state.isCollapsedEdge) {
+    els.collapsedEdgeStrip.classList.toggle('vertical', mode === 'left' || mode === 'right');
+    els.collapsedEdgeLabel.textContent = mode === 'left'
+      ? 'MemoBam ▶'
+      : (mode === 'right' ? '◀ MemoBam' : '▲ MemoBam');
+  }
+
+  if (!isStandalonePwaWindow()) return;
+
+  try {
+    if (mode === 'normal') {
+      const w = Math.min(1180, availW);
+      const h = Math.min(760, availH);
+      window.resizeTo(w, h);
+      window.moveTo(availLeft + Math.round((availW - w) / 2), availTop + Math.round((availH - h) / 2));
+      return;
+    }
+
+    if (mode === 'left') {
+      const w = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_SIDE_WIDTH, availW);
+      window.resizeTo(w, availH);
+      window.moveTo(availLeft, availTop);
+    } else if (mode === 'right') {
+      const w = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_SIDE_WIDTH, availW);
+      window.resizeTo(w, availH);
+      window.moveTo(availLeft + availW - w, availTop);
+    } else if (mode === 'bottom') {
+      const h = state.isCollapsedEdge ? COLLAPSED_STRIP_SIZE : Math.min(DOCK_BOTTOM_HEIGHT, availH);
+      window.resizeTo(availW, h);
+      window.moveTo(availLeft, availTop + availH - h);
+    }
+  } catch {
+    // Ignore if browser restricts moveTo/resizeTo
+  }
+}
+
+function scheduleAutoHideCollapse() {
+  clearTimeout(autoHideTimer);
+  if (!state.autoHide || state.dockMode === 'normal' || state.isCollapsedEdge) return;
+  autoHideTimer = setTimeout(() => {
+    applyDockGeometry(true);
+  }, 600);
+}
+
+function expandFromAutoHide() {
+  clearTimeout(autoHideTimer);
+  if (state.isCollapsedEdge) {
+    applyDockGeometry(false);
+  }
+}
+
+function updateDockButtonsUI() {
+  document.querySelectorAll('.dock-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.dock === state.dockMode);
+  });
+  els.autoHideToggleBtn.classList.toggle('active', state.autoHide);
 }
 
 // ===== BOOTSTRAP =====
@@ -1625,6 +1792,10 @@ async function bootstrap() {
   initTheme();
   await storage.init();
   bindEvents();
+  updateDockButtonsUI();
+  if (state.dockMode !== 'normal' && isStandalonePwaWindow()) {
+    applyDockGeometry(false);
+  }
 
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab');

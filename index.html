@@ -16,15 +16,42 @@
 </head>
 
 <body>
-  <div class="app-shell">
+  <!-- Collapsed Edge Strip (shown when Auto-Hide is active and collapsed) -->
+  <div id="collapsedEdgeStrip" class="collapsed-edge-strip hidden"
+    title="Passa il mouse o trascina qui un file per aprire MemoBam">
+    <span id="collapsedEdgeLabel">◀ MemoBam</span>
+  </div>
+
+  <div id="appShell" class="app-shell">
     <!-- Top Header (matching MemoBam Desktop) -->
     <header class="topbar">
       <div class="topbar-brand">
+        <div class="topbar-menu-wrap">
+          <button id="topbarMenuBtn" type="button" class="btn btn-topbar menu-trigger-btn"
+            aria-haspopup="true" aria-expanded="false" title="Menu finestra, ancoraggio e credits">☰</button>
+          <div id="topbarMenuDropdown" class="topbar-menu-dropdown hidden" role="menu">
+            <div class="dock-menu-section">
+              <div class="menu-section-label">Ancoraggio finestra</div>
+              <button type="button" class="menu-item-btn dock-btn active" data-dock="normal" role="menuitem">🪟 Finestra</button>
+              <button type="button" class="menu-item-btn dock-btn" data-dock="left" role="menuitem">⬅ Ancora a Sx</button>
+              <button type="button" class="menu-item-btn dock-btn" data-dock="right" role="menuitem">➡ Ancora a Dx</button>
+              <button type="button" class="menu-item-btn dock-btn" data-dock="bottom" role="menuitem">⬇ Ancora in Basso</button>
+              <button id="autoHideToggleBtn" type="button" class="menu-item-btn" role="menuitem">👁️ Scomparsa al bordo</button>
+              <div class="menu-divider"></div>
+            </div>
+            <button id="creditsBtn" type="button" class="menu-item-btn credit-btn" role="menuitem"
+              title="Credits &amp; QR Code PWA">
+              <span class="credit-qr-thumb"><img src="./icons/qrcode-memobam.png" alt="QR"></span>
+              <span>by Bruno Astemio • 📱 PWA</span>
+            </button>
+          </div>
+        </div>
+
         <img src="./icons/icon.svg" alt="MemoBam" class="brand-icon">
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v1.7.0</span>
+            <span class="version-label">v1.8.0</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -32,8 +59,6 @@
       </div>
 
       <div class="topbar-controls">
-        <span class="credit-pill desktop-only" title="MemoBam di Bruno Astemio">by Bruno Astemio</span>
-
         <span id="totalCountBadge" class="total-count-pill">0 schede</span>
 
         <button id="connectFolderBtn" class="btn btn-topbar desktop-only"
@@ -399,6 +424,41 @@
         </div>
       </div>
       <div id="filePreviewBody" class="modal-body preview-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Credits & PWA QR Code Modal -->
+  <div id="creditsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="creditsModalTitle">
+    <div class="modal-card credits-modal-card">
+      <div class="modal-header">
+        <h3 id="creditsModalTitle">ℹ️ Credits &amp; QR Code PWA</h3>
+        <button id="closeCreditsModalBtn" class="icon-btn" type="button" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="modal-body credits-body">
+        <div class="credits-brand">
+          <img src="./icons/icon.svg" alt="MemoBam" class="credits-app-icon">
+          <div>
+            <div class="credits-app-name">MemoBam <span class="version-label">v1.8.0</span></div>
+            <div class="credits-author">Creato da <strong>Bruno Astemio</strong></div>
+          </div>
+        </div>
+        <p class="credits-desc">
+          Archivio Documenti Drag &amp; Drop e Diario Giornaliero — Web App &amp; PWA installabile su PC, ChromeOS e Smartphone.
+        </p>
+        <div class="credits-qr-box">
+          <img src="./icons/qrcode-memobam.png" alt="QR Code MemoBam PWA" class="credits-qr-img">
+          <span class="credits-qr-hint">Inquadra con lo smartphone per aprire e installare la PWA</span>
+        </div>
+        <div class="credits-url-row">
+          <a href="https://ambruno1968.github.io/MemoBam/" target="_blank" rel="noopener"
+            class="credits-url-link">https://ambruno1968.github.io/MemoBam/</a>
+          <button id="copyPwaUrlBtn" type="button" class="btn btn-xs btn-primary">📋 Copia link</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeCreditsFooterBtn" type="button" class="btn btn-neutral">Chiudi</button>
+      </div>
     </div>
   </div>
 

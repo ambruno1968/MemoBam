@@ -1,4 +1,4 @@
-const CACHE_NAME = 'memobam-pwa-v1.7.0';
+const CACHE_NAME = 'memobam-pwa-v1.8.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,7 +10,8 @@ const APP_SHELL = [
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-maskable-512.png'
+  './icons/icon-maskable-512.png',
+  './icons/qrcode-memobam.png'
 ];
 
 self.addEventListener('install', (event) => {

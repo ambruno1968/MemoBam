@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.8.0] - 2026-11-23
+
+### Aggiunto
+- **Menu laterale sinistro (`☰`) e ancoraggio finestra PWA**: aggiunti `🪟 Finestra`, `⬅ Ancora a Sx`, `➡ Ancora a Dx`, `⬇ Ancora in Basso` e `👁️ Scomparsa al bordo` (con riapertura automatica al passaggio del mouse o drag & drop in finestra PWA installata).
+- **Popup Credits & QR Code PWA** (`#creditsModal`): spostati i credits (`by Bruno Astemio • 📱 PWA`) nel menu sinistro con QR Code offline ([qrcode-memobam.png](icons/qrcode-memobam.png)) e pulsante `📋 Copia link`.
+
+### Migliorato
+- **Palette temi**: tema scuro con base **nero** (`#000000`) e tema chiaro con base **blu chiarissimo** (`#EBF4FF`).
+- **Badge cartella**: rimossa l'etichetta superflua `(clicca 📁 per riconnettere)` mantenendo la riconnessione in 1 clic.
+
 ## [1.7.0] - 2026-11-23
 
 ### Aggiunto
