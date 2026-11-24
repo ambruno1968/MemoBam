@@ -1,6 +1,6 @@
-# MemoBam PWA
+# MemoBam
 
-Applicazione **PWA completa** (**v2.1.0**) per gestire **Archivio Documenti**, **Diario Giornaliero** e **Post-IT** su **PC**, **ChromeOS** e **Smartphone**.
+Applicazione **MemoBam** (**v2.1.1**) per gestire **Archivio Documenti**, **Diario Giornaliero** e **Post-IT** su **PC**, **ChromeOS** e **Smartphone**.
 
 ## Caratteristiche principali
 
@@ -25,4 +25,4 @@ Apri `http://localhost:5187` nel browser.
 ## Pubblicazione
 
 Pubblicata su **GitHub Pages** dal repository `https://github.com/ambruno1968/MemoBam` (branch `main`, root `/`):
-- URL PWA: `https://ambruno1968.github.io/MemoBam/`
+- URL MemoBam: `https://ambruno1968.github.io/MemoBam/`

@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [2.1.1] - 2026-11-24
+
+### Migliorato
+- **Branding unificato `MemoBam`**: rimossi tutti i riferimenti visibili a `PWA` nell'interfaccia, nei messaggi toast e nella documentazione sostituendoli con il nome ufficiale **MemoBam**.
+
 ## [2.1.0] - 2026-11-24
 
 ### Aggiunto

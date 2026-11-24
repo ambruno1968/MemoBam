@@ -1813,7 +1813,7 @@ function bindEvents() {
     const url = 'https://ambruno1968.github.io/MemoBam/';
     try {
       await navigator.clipboard.writeText(url);
-      showToast('Link PWA copiato negli appunti!');
+      showToast('Link MemoBam copiato negli appunti!');
     } catch {
       showToast(url);
     }
@@ -2866,7 +2866,7 @@ function bindEvents() {
       localStorage.setItem('memobam_dock_mode', state.dockMode);
       updateDockButtonsUI();
       if (state.dockMode !== 'normal' && !isStandalonePwaWindow()) {
-        showToast('Per ancorare ai bordi Sx/Dx/Basso, apri MemoBam come App PWA installata.');
+        showToast('Per ancorare ai bordi Sx/Dx/Basso, apri MemoBam come App installata.');
       }
       applyDockGeometry(false);
     });
