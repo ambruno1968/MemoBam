@@ -1704,7 +1704,8 @@ body {
   display: none;
 }
 
-.mobile-only-pane {
+.mobile-only-pane,
+.mobile-only-upload-btn {
   display: none;
 }
 
@@ -1739,9 +1740,16 @@ body {
     justify-content: flex-end;
   }
 
+  .mobile-only-upload-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+
   .bottom-nav {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     background: var(--surface-solid);
     border-top: 1px solid var(--border);
     padding-bottom: env(safe-area-inset-bottom);

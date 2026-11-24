@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [2.0.1] - 2026-11-24
+
+### Risolto
+- **Menu verticale (mobile) allineato al menu orizzontale**: ridotta la barra di navigazione inferiore alle 3 sezioni principali (`📁 Archivio`, `📓 Diario`, `📝 Post-IT`) eliminando le voci duplicate/ridondanti (`Archivia`, `Sospesi`, `Dati` già accessibile dal menu `☰`) e aggiunto il pulsante `📥 Archivia nuovo documento ▾` nella scheda Archivio su vista mobile.
+
 ## [2.0.0] - 2026-11-23
 
 ### Aggiunto

@@ -118,6 +118,7 @@ const els = {
   settingsPane: document.getElementById('settingsPane'),
 
   excludeDiaryAttachmentsChk: document.getElementById('excludeDiaryAttachmentsChk'),
+  mobileToggleDropBtn: document.getElementById('mobileToggleDropBtn'),
   archiveCategoryFilter: document.getElementById('archiveCategoryFilter'),
   archiveSummaryText: document.getElementById('archiveSummaryText'),
   archiveList: document.getElementById('archiveList'),
@@ -695,8 +696,10 @@ function renderPending() {
   const pendingNotes = state.notes.filter((n) => !n.IsDone);
   const total = pendingArchive.length + pendingDiary.length + pendingNotes.length;
 
-  els.navPendingBadge.textContent = total;
-  els.navPendingBadge.classList.toggle('hidden', total === 0);
+  if (els.navPendingBadge) {
+    els.navPendingBadge.textContent = total;
+    els.navPendingBadge.classList.toggle('hidden', total === 0);
+  }
   els.pendingBanner.classList.toggle('hidden', total === 0);
 
   if (total === 0) {
@@ -1495,8 +1498,10 @@ function switchSection(section) {
 
   // Mobile bottom nav & panes
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === section));
-  els.dropPane.classList.toggle('mobile-active', section === 'drop');
-  els.archiveTabContent.classList.toggle('mobile-active', section === 'archive' || section === 'pending');
+  if (section !== 'archive') {
+    els.dropPane.classList.remove('mobile-active');
+  }
+  els.archiveTabContent.classList.toggle('mobile-active', section === 'archive');
   els.diaryTabContent.classList.toggle('mobile-active', section === 'diary');
   els.notesTabContent.classList.toggle('mobile-active', section === 'notes');
   els.settingsPane.classList.toggle('mobile-active', section === 'settings');
@@ -1521,6 +1526,12 @@ function bindEvents() {
   // Mobile bottom nav
   document.querySelectorAll('.nav-btn').forEach((btn) => {
     btn.addEventListener('click', () => switchSection(btn.dataset.tab));
+  });
+  els.mobileToggleDropBtn?.addEventListener('click', () => {
+    const isOpen = els.dropPane.classList.toggle('mobile-active');
+    els.mobileToggleDropBtn.textContent = isOpen
+      ? '📥 Chiudi archiviazione ▴'
+      : '📥 Archivia nuovo documento ▾';
   });
 
   // Theme toggle

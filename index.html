@@ -69,7 +69,7 @@
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v2.0.0</span>
+            <span class="version-label">v2.0.1</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -188,6 +188,9 @@
 
           <!-- TAB 1: Archivio Documenti -->
           <div id="archiveTabContent" class="tab-content active" data-pane="archive">
+            <button id="mobileToggleDropBtn" type="button" class="btn btn-primary btn-sm mobile-only-upload-btn">
+              📥 Archivia nuovo documento ▾
+            </button>
             <div class="search-card archive-controls-row">
               <label class="checkbox-inline"
                 title="Se attivo, nasconde in Archivio Documenti gli allegati collegati alle righe del Diario">
@@ -323,19 +326,6 @@
       <button class="nav-btn" data-tab="notes" type="button">
         <span class="nav-ico">📝</span>
         <span>Post-IT</span>
-      </button>
-      <button class="nav-btn" data-tab="drop" type="button">
-        <span class="nav-ico">📥</span>
-        <span>Archivia</span>
-      </button>
-      <button class="nav-btn" data-tab="pending" type="button">
-        <span class="nav-ico">⏳</span>
-        <span>Sospesi</span>
-        <span id="navPendingBadge" class="nav-badge hidden">0</span>
-      </button>
-      <button class="nav-btn" data-tab="settings" type="button">
-        <span class="nav-ico">⚙️</span>
-        <span>Dati</span>
       </button>
     </nav>
   </div>
@@ -528,7 +518,7 @@
         <div class="credits-brand">
           <img src="./icons/icon.svg" alt="MemoBam" class="credits-app-icon">
           <div>
-            <div class="credits-app-name">MemoBam <span class="version-label">v2.0.0</span></div>
+            <div class="credits-app-name">MemoBam <span class="version-label">v2.0.1</span></div>
             <div class="credits-author">Creato da <strong>Bruno Astemio</strong></div>
           </div>
         </div>
