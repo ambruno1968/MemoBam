@@ -74,6 +74,7 @@ body {
   height: 100dvh;
   max-width: 1600px;
   margin: 0 auto;
+  overflow-x: hidden;
 }
 
 /* Topbar (matching MemoBam Desktop dark gradient header) */
@@ -1072,6 +1073,17 @@ body {
   padding-left: 18px;
 }
 
+.rich-editor *:not(input),
+.diary-text *:not(input) {
+  color: var(--text) !important;
+  background-color: transparent !important;
+}
+
+.rich-editor a,
+.diary-text a {
+  color: var(--accent) !important;
+}
+
 .rich-editor-lg {
   min-height: 160px;
   max-height: 300px;
@@ -1720,6 +1732,122 @@ body {
     gap: 0;
   }
 
+  .app-shell,
+  .workspace-wrapper,
+  .workspace,
+  .right-pane,
+  .tab-content,
+  .card-main,
+  .detail-header-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .topbar {
+    padding: 6px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .topbar-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .brand-text-group {
+    min-width: 0;
+  }
+
+  .storage-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .global-search-bar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .global-search-input {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .date-input {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 120px;
+  }
+
+  .global-search-counts {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .pending-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .composer-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .save-diary-btn {
+    width: 100%;
+  }
+
+  .category-filter-select,
+  .category-select-compact {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .quick-notes-dropdown {
+    min-width: 190px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .modal-backdrop {
+    padding: 8px;
+  }
+
+  .modal-card {
+    max-width: 100%;
+    max-height: 94dvh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 10px 12px;
+  }
+
+  .modal-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .preview-modal-card {
+    height: 92dvh;
+  }
+
+  .preview-header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .preview-modal-body img,
+  .preview-modal-body table {
+    max-width: 100%;
+  }
+
   .drop-pane,
   .tab-content {
     display: none;
@@ -1910,4 +2038,20 @@ body.is-busy * {
   45% { transform: rotate(180deg); }
   55% { transform: rotate(180deg); }
   100% { transform: rotate(360deg); }
+}
+
+.modal-footer-split {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-footer-actions-left,
+.modal-footer-actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }

@@ -3,6 +3,20 @@
 Tutte le modifiche rilevanti a **MemoBam** sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [2.1.0] - 2026-11-24
+
+### Aggiunto
+- **Conversione tra Archivio, Diario e Post-IT**: nuovi pulsanti `📓 Sposta in Diario`, `📝 Sposta in Post-IT`, `📁 Sposta in Archivio` nelle finestre di modifica/dettaglio per spostare gli elementi mantenendo contenuti, categorie, stato `Fatto` e allegati (con generazione automatica di `.txt` se si sposta in Archivio una nota priva di allegati).
+- **Condivisione (`📤 Condividi`)**: disponibile su tutte le schede di Archivio, Diario, Post-IT, nei dettagli e nell'anteprima file tramite Web Share API (inclusi file allegati dove supportato) con fallback su copia negli appunti.
+- **Avviso anteprima > 1 MB e clessidra > 2 secondi**: richiesta di conferma prima di aprire l'anteprima di allegati superiori a `1 MB` e visualizzazione automatica della clessidra animata se l'apertura/lettura supera `2 secondi`.
+
+### Migliorato
+- **Ordine schede**: riordinate le schede principali (desktop, mobile e ricerca globale) in **`Diario`**, **`Post-IT`**, **`Archivio`** con avvio predefinito su `Diario`.
+- **Adattamento dinamico schermi mobile**: ottimizzati topbar, barra di ricerca, compositore, selettori categorie, modali e anteprime per evitare fuoriuscite orizzontali su smartphone stretti.
+
+### Risolto
+- **Leggibilità testo in tema scuro**: forzato `color: var(--text)` e `background-color: transparent` negli editor `.rich-editor` e nelle schede `.diary-text` per rendere sempre leggibile anche il testo incollato con stili inline scuri.
+
 ## [2.0.1] - 2026-11-24
 
 ### Risolto

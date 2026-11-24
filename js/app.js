@@ -31,7 +31,7 @@ const state = {
   notes: [],
   quickNotes: [],
   categories: [],
-  activeSection: 'archive',
+  activeSection: 'diary',
   globalSearch: '',
   globalDateFilter: '',
   archiveCategoryFilter: '',
@@ -166,6 +166,9 @@ const els = {
   editItemTitleInput: document.getElementById('editItemTitleInput'),
   editItemNotesInput: document.getElementById('editItemNotesInput'),
   editItemCategorySelect: document.getElementById('editItemCategorySelect'),
+  editItemShareBtn: document.getElementById('editItemShareBtn'),
+  moveArchiveToDiaryBtn: document.getElementById('moveArchiveToDiaryBtn'),
+  moveArchiveToNoteBtn: document.getElementById('moveArchiveToNoteBtn'),
   cancelEditItemBtn: document.getElementById('cancelEditItemBtn'),
   saveEditItemBtn: document.getElementById('saveEditItemBtn'),
 
@@ -183,6 +186,9 @@ const els = {
   detailEditor: document.getElementById('detailEditor'),
   detailAttachmentsSection: document.getElementById('detailAttachmentsSection'),
   detailAttachmentsList: document.getElementById('detailAttachmentsList'),
+  detailShareBtn: document.getElementById('detailShareBtn'),
+  moveDiaryToArchiveBtn: document.getElementById('moveDiaryToArchiveBtn'),
+  moveDiaryToNoteBtn: document.getElementById('moveDiaryToNoteBtn'),
   cancelDiaryDetailBtn: document.getElementById('cancelDiaryDetailBtn'),
   saveDiaryDetailBtn: document.getElementById('saveDiaryDetailBtn'),
 
@@ -237,6 +243,9 @@ const els = {
   noteDetailEditor: document.getElementById('noteDetailEditor'),
   noteDetailAttachmentsSection: document.getElementById('noteDetailAttachmentsSection'),
   noteDetailAttachmentsList: document.getElementById('noteDetailAttachmentsList'),
+  noteDetailShareBtn: document.getElementById('noteDetailShareBtn'),
+  moveNoteToArchiveBtn: document.getElementById('moveNoteToArchiveBtn'),
+  moveNoteToDiaryBtn: document.getElementById('moveNoteToDiaryBtn'),
   cancelNoteDetailBtn: document.getElementById('cancelNoteDetailBtn'),
   saveNoteDetailBtn: document.getElementById('saveNoteDetailBtn'),
   noteEntryAttachInput: document.getElementById('noteEntryAttachInput'),
@@ -245,6 +254,7 @@ const els = {
   filePreviewTitle: document.getElementById('filePreviewTitle'),
   filePreviewSubtitle: document.getElementById('filePreviewSubtitle'),
   previewCategorySelect: document.getElementById('previewCategorySelect'),
+  previewShareBtn: document.getElementById('previewShareBtn'),
   previewOpenSystemBtn: document.getElementById('previewOpenSystemBtn'),
   previewSaveFileBtn: document.getElementById('previewSaveFileBtn'),
   closeFilePreviewTopBtn: document.getElementById('closeFilePreviewTopBtn'),
@@ -268,7 +278,7 @@ function showToast(msg) {
 
 let busyCount = 0;
 let busyShowTimer = null;
-function showBusy(message = 'Operazione in corso...') {
+function showBusy(message = 'Operazione in corso...', delayMs = 120) {
   busyCount++;
   els.busyOverlayText.textContent = message;
   document.body.classList.add('is-busy');
@@ -278,7 +288,7 @@ function showBusy(message = 'Operazione in corso...') {
       if (busyCount > 0) {
         els.busyOverlay.classList.remove('hidden');
       }
-    }, 120);
+    }, delayMs);
   }
 }
 
@@ -294,8 +304,8 @@ function hideBusy() {
   }
 }
 
-async function withBusy(message, fn) {
-  showBusy(message);
+async function withBusy(message, fn, delayMs = 120) {
+  showBusy(message, delayMs);
   try {
     return await fn();
   } finally {
@@ -904,6 +914,7 @@ function renderArchive() {
         <div class="card-actions">
           <button class="btn btn-xs btn-primary js-archive-open" data-id="${item.Id}" type="button">Apri</button>
           <button class="btn btn-xs btn-neutral js-archive-edit" data-id="${item.Id}" type="button">Modifica</button>
+          <button class="btn btn-xs btn-neutral js-archive-share" data-id="${item.Id}" type="button" title="Condividi">📤</button>
           <button class="btn btn-xs btn-danger-soft js-archive-delete" data-id="${item.Id}" type="button">Elimina</button>
         </div>
       </article>`;
@@ -967,6 +978,7 @@ function renderDiary() {
         <div class="card-actions">
           <button class="btn btn-xs btn-primary js-diary-open" data-id="${entry.Id}" type="button" title="Apri nota completa">Apri</button>
           <button class="btn btn-xs btn-neutral js-diary-attach" data-id="${entry.Id}" type="button" title="Allega file a questa riga">📎 Allega</button>
+          <button class="btn btn-xs btn-neutral js-diary-share" data-id="${entry.Id}" type="button" title="Condividi">📤</button>
           <button class="btn btn-xs btn-danger-soft js-diary-delete" data-id="${entry.Id}" type="button">Elimina</button>
         </div>
       </article>`;
@@ -1022,6 +1034,7 @@ function renderNotes() {
         <div class="card-actions">
           <button class="btn btn-xs btn-primary js-note-open" data-id="${note.Id}" type="button" title="Apri Post-IT completo">Apri</button>
           <button class="btn btn-xs btn-neutral js-note-attach" data-id="${note.Id}" type="button" title="Allega file a questo Post-IT">📎 Allega</button>
+          <button class="btn btn-xs btn-neutral js-note-share" data-id="${note.Id}" type="button" title="Condividi">📤</button>
           <button class="btn btn-xs btn-danger-soft js-note-delete" data-id="${note.Id}" type="button">Elimina</button>
         </div>
       </article>`;
@@ -1242,11 +1255,19 @@ function triggerFileDownload(blob, fileName) {
 
 async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = false) {
   const blob = await withBusy('Lettura file in corso...', () =>
-    storage.getStoredFileBlob(storedRelativePath, isDiaryAttachment)
+    storage.getStoredFileBlob(storedRelativePath, isDiaryAttachment),
+    2000
   );
   if (!blob) {
     showToast(`File non disponibile localmente (${storedRelativePath || fileName})`);
     return;
+  }
+
+  if (blob.size > 1024 * 1024) {
+    const proceed = confirm(
+      `L'allegato "${fileName || 'documento'}" pesa ${formatBytes(blob.size)} (superiore a 1 MB).\nL'apertura dell'anteprima potrebbe richiedere qualche secondo.\n\nVuoi continuare?`
+    );
+    if (!proceed) return;
   }
 
   if (currentPreview.objectUrl) {
@@ -1298,7 +1319,11 @@ async function openStoredFile(storedRelativePath, fileName, isDiaryAttachment = 
   els.filePreviewBody.innerHTML = `<div class="empty-state">Caricamento anteprima...</div>`;
   els.filePreviewModal.classList.remove('hidden');
 
-  const { objectUrl } = await renderFilePreview(blob, fileName, els.filePreviewBody);
+  const { objectUrl } = await withBusy(
+    'Apertura anteprima in corso...',
+    () => renderFilePreview(blob, fileName, els.filePreviewBody),
+    2000
+  );
   currentPreview = { blob, fileName, objectUrl, ownerType, ownerId };
 }
 
@@ -1378,6 +1403,173 @@ function openNoteDetailModal(note) {
   renderNoteDetailAttachments(note);
   els.noteDetailModal.classList.remove('hidden');
   els.noteDetailEditor.focus();
+}
+
+function buildSafeFileName(title, ext = '.txt') {
+  const clean = String(title || 'MemoBam')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, '_')
+    .slice(0, 60)
+    .replace(/^_+|_+$/g, '');
+  return `${clean || 'MemoBam'}${ext}`;
+}
+
+async function collectAttachmentsAsFiles(attachments = [], scope = 'diary') {
+  const files = [];
+  for (const att of attachments || []) {
+    if (!att?.StoredRelativePath) continue;
+    const blob = await storage.getStoredFileBlob(att.StoredRelativePath, scope);
+    if (blob) {
+      files.push(new File([blob], att.FileName || 'allegato', { type: blob.type || 'application/octet-stream' }));
+    }
+  }
+  return files;
+}
+
+async function shareItem(type, item) {
+  if (!item) return;
+  let title = 'MemoBam';
+  let bodyLines = [];
+  let files = [];
+
+  await withBusy('Preparazione condivisione...', async () => {
+    const catName = getCategoryName(item.CategoryId);
+    if (type === 'archive') {
+      title = item.Title || item.OriginalFileName || 'Documento MemoBam';
+      bodyLines.push(`📁 ${title}`);
+      if (item.ArchivedAt) bodyLines.push(`📅 ${formatDateIt(item.ArchivedAt)} ${formatTimeIt(item.ArchivedAt)}`);
+      if (catName) bodyLines.push(`🏷️ Categoria: ${catName}`);
+      if (item.OriginalFileName) bodyLines.push(`📄 File: ${item.OriginalFileName}`);
+      if (item.Notes) bodyLines.push(`\n${item.Notes}`);
+      if (item.StoredRelativePath) {
+        const scope = item._isDiaryAttachment ? true : false;
+        const blob = await storage.getStoredFileBlob(item.StoredRelativePath, scope);
+        if (blob) {
+          files.push(new File([blob], item.OriginalFileName || 'documento', { type: blob.type || 'application/octet-stream' }));
+        }
+      }
+    } else if (type === 'diary') {
+      title = `Diario ${formatDateIt(item.Timestamp)}`;
+      bodyLines.push(`📓 Diario (${formatDateIt(item.Timestamp)} ${formatTimeIt(item.Timestamp)})`);
+      if (catName) bodyLines.push(`🏷️ Categoria: ${catName}`);
+      if (item.Text) bodyLines.push(`\n${item.Text}`);
+      files = await collectAttachmentsAsFiles(item.Attachments, true);
+    } else if (type === 'notes') {
+      title = item.Title || 'Post-IT MemoBam';
+      bodyLines.push(`📝 ${title}`);
+      if (item.CreatedAt) bodyLines.push(`📅 ${formatDateIt(item.CreatedAt)} ${formatTimeIt(item.CreatedAt)}`);
+      if (catName) bodyLines.push(`🏷️ Categoria: ${catName}`);
+      if (item.Text) bodyLines.push(`\n${item.Text}`);
+      files = await collectAttachmentsAsFiles(item.Attachments, 'notes');
+    }
+  });
+
+  const text = bodyLines.join('\n');
+
+  if (navigator.share) {
+    try {
+      const shareData = { title, text };
+      if (files.length > 0 && navigator.canShare && navigator.canShare({ files })) {
+        shareData.files = files;
+      }
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 Testo copiato negli appunti per la condivisione');
+  } catch {
+    showToast('Condivisione non supportata su questo browser');
+  }
+}
+
+async function convertItem(fromType, toType, id) {
+  if (!id || fromType === toType) return;
+  const labels = { archive: 'Archivio', diary: 'Diario', notes: 'Post-IT' };
+  if (!confirm(`Vuoi spostare questo elemento da ${labels[fromType]} a ${labels[toType]}?`)) return;
+
+  await withBusy(`Spostamento in ${labels[toType]}...`, async () => {
+    if (fromType === 'archive') {
+      const item = state.archive.find((i) => i.Id === id);
+      if (!item) return;
+      const blob = item.StoredRelativePath
+        ? await storage.getStoredFileBlob(item.StoredRelativePath, false)
+        : null;
+      const fileObj = blob
+        ? new File([blob], item.OriginalFileName || 'documento', { type: blob.type || 'application/octet-stream' })
+        : null;
+
+      if (toType === 'diary') {
+        const text = item.Notes ? `${item.Title}\n${item.Notes}` : (item.Title || item.OriginalFileName);
+        const dateStr = (item.ArchivedAt || '').slice(0, 10) || getTodayDateStr();
+        const entry = await storage.addDiaryEntry(text, dateStr, null, item.CategoryId || null);
+        if (fileObj) await storage.addDiaryAttachments(entry.Id, [fileObj]);
+        if (!item.IsDone) await storage.setDiaryDone(entry.Id, false);
+      } else if (toType === 'notes') {
+        const title = item.Title || item.OriginalFileName || 'Post-IT';
+        const text = item.Notes || item.OriginalFileName || title;
+        const note = await storage.addNote(title, text, null, item.CategoryId || null);
+        if (fileObj) await storage.addNoteAttachments(note.Id, [fileObj]);
+        if (!item.IsDone) await storage.setNoteDone(note.Id, false);
+      }
+      await storage.deleteArchiveItem(item);
+      els.editItemModal.classList.add('hidden');
+    } else if (fromType === 'diary') {
+      const entry = state.diary.find((e) => e.Id === id);
+      if (!entry) return;
+      const files = await collectAttachmentsAsFiles(entry.Attachments, true);
+      const firstLine = (entry.Text || '').split(/\r?\n/)[0]?.trim() || 'Nota Diario';
+
+      if (toType === 'archive') {
+        const filesToArchive = files.length > 0
+          ? files
+          : [new File([entry.Text || ''], buildSafeFileName(firstLine, '.txt'), { type: 'text/plain' })];
+        const added = await storage.addArchiveFiles(filesToArchive, firstLine.slice(0, 80), entry.Text || '', entry.CategoryId || null);
+        if (!entry.IsDone) {
+          for (const a of added) await storage.setArchiveDone(a.Id, false);
+        }
+      } else if (toType === 'notes') {
+        const note = await storage.addNote(firstLine.slice(0, 60), entry.Text || '', entry.RichContentHtml || null, entry.CategoryId || null);
+        if (files.length > 0) await storage.addNoteAttachments(note.Id, files);
+        if (!entry.IsDone) await storage.setNoteDone(note.Id, false);
+      }
+      await storage.deleteDiaryEntry(entry.Id);
+      els.diaryDetailModal.classList.add('hidden');
+    } else if (fromType === 'notes') {
+      const note = state.notes.find((n) => n.Id === id);
+      if (!note) return;
+      const files = await collectAttachmentsAsFiles(note.Attachments, 'notes');
+
+      if (toType === 'archive') {
+        const filesToArchive = files.length > 0
+          ? files
+          : [new File([note.Text || note.Title || ''], buildSafeFileName(note.Title || 'Post-IT', '.txt'), { type: 'text/plain' })];
+        const added = await storage.addArchiveFiles(filesToArchive, note.Title || 'Post-IT', note.Text || '', note.CategoryId || null);
+        if (!note.IsDone) {
+          for (const a of added) await storage.setArchiveDone(a.Id, false);
+        }
+      } else if (toType === 'diary') {
+        const text = note.Title ? `${note.Title}\n${note.Text}` : (note.Text || '');
+        const richHtml = note.RichContentHtml
+          ? (note.Title ? `<div><strong>${escapeHtml(note.Title)}</strong></div>${note.RichContentHtml}` : note.RichContentHtml)
+          : null;
+        const dateStr = (note.CreatedAt || '').slice(0, 10) || getTodayDateStr();
+        const entry = await storage.addDiaryEntry(text, dateStr, richHtml, note.CategoryId || null);
+        if (files.length > 0) await storage.addDiaryAttachments(entry.Id, files);
+        if (!note.IsDone) await storage.setDiaryDone(entry.Id, false);
+      }
+      await storage.deleteNote(note.Id);
+      els.noteDetailModal.classList.add('hidden');
+    }
+
+    await reloadData();
+    switchSection(toType);
+    showToast(`Spostato in ${labels[toType]}`);
+  });
 }
 
 function renderNoteDetailAttachments(note) {
@@ -1628,6 +1820,21 @@ function bindEvents() {
   });
 
   // Document Preview Modal actions
+  els.previewShareBtn.addEventListener('click', async () => {
+    const { ownerType, ownerId } = currentPreview;
+    if (ownerType === 'archive') {
+      const item = state.archive.find((i) => i.Id === ownerId);
+      if (item) await shareItem('archive', item);
+    } else if (ownerType === 'diary') {
+      const entry = state.diary.find((d) => d.Id === ownerId);
+      if (entry) await shareItem('diary', entry);
+    } else if (ownerType === 'notes') {
+      const note = state.notes.find((n) => n.Id === ownerId);
+      if (note) await shareItem('notes', note);
+    } else if (currentPreview.blob) {
+      await shareItem('archive', { Title: currentPreview.fileName, OriginalFileName: currentPreview.fileName });
+    }
+  });
   els.previewCategorySelect.addEventListener('change', async () => {
     const { ownerType, ownerId } = currentPreview;
     if (!ownerId) return;
@@ -1894,6 +2101,12 @@ function bindEvents() {
 
   els.closeNoteDetailModalBtn.addEventListener('click', () => els.noteDetailModal.classList.add('hidden'));
   els.cancelNoteDetailBtn.addEventListener('click', () => els.noteDetailModal.classList.add('hidden'));
+  els.noteDetailShareBtn.addEventListener('click', async () => {
+    const note = state.notes.find((n) => n.Id === state.detailNoteId);
+    if (note) await shareItem('notes', note);
+  });
+  els.moveNoteToArchiveBtn.addEventListener('click', () => convertItem('notes', 'archive', state.detailNoteId));
+  els.moveNoteToDiaryBtn.addEventListener('click', () => convertItem('notes', 'diary', state.detailNoteId));
   els.noteDetailBoldBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'bold'));
   els.noteDetailItalicBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'italic'));
   els.noteDetailBulletBtn.addEventListener('click', () => execEditorCmd(els.noteDetailEditor, 'insertUnorderedList'));
@@ -2092,6 +2305,12 @@ function bindEvents() {
   // Edit Archive Item Modal
   els.closeEditItemModalBtn.addEventListener('click', () => els.editItemModal.classList.add('hidden'));
   els.cancelEditItemBtn.addEventListener('click', () => els.editItemModal.classList.add('hidden'));
+  els.editItemShareBtn.addEventListener('click', async () => {
+    const item = state.archive.find((i) => i.Id === state.editingArchiveId);
+    if (item) await shareItem('archive', item);
+  });
+  els.moveArchiveToDiaryBtn.addEventListener('click', () => convertItem('archive', 'diary', state.editingArchiveId));
+  els.moveArchiveToNoteBtn.addEventListener('click', () => convertItem('archive', 'notes', state.editingArchiveId));
   els.saveEditItemBtn.addEventListener('click', async () => {
     const title = els.editItemTitleInput.value.trim();
     if (!title) {
@@ -2117,6 +2336,12 @@ function bindEvents() {
   // Diary Detail Modal
   els.closeDiaryDetailModalBtn.addEventListener('click', () => els.diaryDetailModal.classList.add('hidden'));
   els.cancelDiaryDetailBtn.addEventListener('click', () => els.diaryDetailModal.classList.add('hidden'));
+  els.detailShareBtn.addEventListener('click', async () => {
+    const entry = state.diary.find((e) => e.Id === state.detailDiaryId);
+    if (entry) await shareItem('diary', entry);
+  });
+  els.moveDiaryToArchiveBtn.addEventListener('click', () => convertItem('diary', 'archive', state.detailDiaryId));
+  els.moveDiaryToNoteBtn.addEventListener('click', () => convertItem('diary', 'notes', state.detailDiaryId));
   els.detailBoldBtn.addEventListener('click', () => execEditorCmd(els.detailEditor, 'bold'));
   els.detailItalicBtn.addEventListener('click', () => execEditorCmd(els.detailEditor, 'italic'));
   els.detailBulletBtn.addEventListener('click', () => execEditorCmd(els.detailEditor, 'insertUnorderedList'));
@@ -2261,6 +2486,12 @@ function bindEvents() {
       }
       return;
     }
+    if (target.closest('.js-archive-share')) {
+      const id = target.closest('.js-archive-share').dataset.id;
+      const item = getUnifiedArchive().find((i) => i.Id === id);
+      if (item) await shareItem('archive', item);
+      return;
+    }
     if (target.closest('.js-archive-delete')) {
       const id = target.closest('.js-archive-delete').dataset.id;
       const item = getUnifiedArchive().find((i) => i.Id === id);
@@ -2391,6 +2622,12 @@ function bindEvents() {
       els.noteEntryAttachInput.click();
       return;
     }
+    if (target.closest('.js-note-share')) {
+      const id = target.closest('.js-note-share').dataset.id;
+      const note = state.notes.find((n) => n.Id === id);
+      if (note) await shareItem('notes', note);
+      return;
+    }
     if (target.closest('.js-note-delete')) {
       const id = target.closest('.js-note-delete').dataset.id;
       const note = state.notes.find((n) => n.Id === id);
@@ -2451,6 +2688,12 @@ function bindEvents() {
     if (target.closest('.js-diary-attach')) {
       state.pendingAttachEntryId = target.closest('.js-diary-attach').dataset.id;
       els.entryAttachInput.click();
+      return;
+    }
+    if (target.closest('.js-diary-share')) {
+      const id = target.closest('.js-diary-share').dataset.id;
+      const entry = state.diary.find((d) => d.Id === id);
+      if (entry) await shareItem('diary', entry);
       return;
     }
     if (target.closest('.js-diary-delete')) {
@@ -2755,7 +2998,7 @@ async function bootstrap() {
 
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab');
-  switchSection(tab === 'diary' ? 'diary' : (tab === 'notes' ? 'notes' : 'archive'));
+  switchSection(tab === 'archive' ? 'archive' : (tab === 'notes' ? 'notes' : 'diary'));
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { });

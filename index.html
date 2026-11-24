@@ -69,7 +69,7 @@
         <div class="brand-text-group">
           <div class="brand-title-row">
             <h1 class="brand-title">MemoBam</h1>
-            <span class="version-label">v2.0.1</span>
+            <span class="version-label">v2.1.0</span>
             <span class="brand-subtitle desktop-only">• Archivio Lavori &amp; Diario</span>
           </div>
           <span id="storageBadge" class="storage-badge" title="Origine dati attiva">Cache Locale (Offline)</span>
@@ -95,12 +95,12 @@
         title="Filtra globalmente Archivio e Diario per data">
       <button id="clearGlobalSearchBtn" type="button" class="btn btn-neutral btn-sm">Pulisci</button>
       <div id="globalSearchCounts" class="global-search-counts hidden">
-        <button id="globalArchiveCountBtn" type="button" class="btn btn-xs btn-soft-blue"
-          title="Vai ai risultati in Archivio Documenti">📁 0 Archivio</button>
         <button id="globalDiaryCountBtn" type="button" class="btn btn-xs btn-soft-purple"
           title="Vai ai risultati nel Diario Giornaliero">📓 0 Diario</button>
         <button id="globalNotesCountBtn" type="button" class="btn btn-xs btn-soft-green"
           title="Vai ai risultati in Post-IT">📝 0 Post-IT</button>
+        <button id="globalArchiveCountBtn" type="button" class="btn btn-xs btn-soft-blue"
+          title="Vai ai risultati in Archivio Documenti">📁 0 Archivio</button>
       </div>
     </section>
 
@@ -175,14 +175,14 @@
         <section id="mainRightPane" class="right-pane">
           <!-- Section Switcher (Desktop) -->
           <div class="section-tabs desktop-only">
-            <button id="archiveTabBtn" class="section-tab active" type="button" data-section="archive">
-              📁 Archivio Documenti
-            </button>
-            <button id="diaryTabBtn" class="section-tab" type="button" data-section="diary">
+            <button id="diaryTabBtn" class="section-tab active" type="button" data-section="diary">
               📓 Diario Giornaliero (<span id="diaryTodayCount">0</span>)
             </button>
             <button id="notesTabBtn" class="section-tab" type="button" data-section="notes">
               📝 Post-IT (<span id="notesCountBadge">0</span>)
+            </button>
+            <button id="archiveTabBtn" class="section-tab" type="button" data-section="archive">
+              📁 Archivio Documenti
             </button>
           </div>
 
@@ -315,17 +315,17 @@
 
     <!-- Mobile Bottom Navigation -->
     <nav class="bottom-nav" aria-label="Navigazione principale">
-      <button class="nav-btn active" data-tab="archive" type="button">
-        <span class="nav-ico">📁</span>
-        <span>Archivio</span>
-      </button>
-      <button class="nav-btn" data-tab="diary" type="button">
+      <button class="nav-btn active" data-tab="diary" type="button">
         <span class="nav-ico">📓</span>
         <span>Diario</span>
       </button>
       <button class="nav-btn" data-tab="notes" type="button">
         <span class="nav-ico">📝</span>
         <span>Post-IT</span>
+      </button>
+      <button class="nav-btn" data-tab="archive" type="button">
+        <span class="nav-ico">📁</span>
+        <span>Archivio</span>
       </button>
     </nav>
   </div>
@@ -352,9 +352,16 @@
           <select id="editItemCategorySelect" class="field-input js-category-select" data-scope="archive"></select>
         </label>
       </div>
-      <div class="modal-footer">
-        <button id="cancelEditItemBtn" type="button" class="btn btn-neutral">Annulla</button>
-        <button id="saveEditItemBtn" type="button" class="btn btn-primary">💾 Salva</button>
+      <div class="modal-footer modal-footer-split">
+        <div class="modal-footer-actions-left">
+          <button id="editItemShareBtn" type="button" class="btn btn-neutral btn-sm" title="Condividi scheda e file">📤 Condividi</button>
+          <button id="moveArchiveToDiaryBtn" type="button" class="btn btn-soft-purple btn-sm" title="Sposta questo elemento nel Diario">📓 Sposta in Diario</button>
+          <button id="moveArchiveToNoteBtn" type="button" class="btn btn-soft-green btn-sm" title="Sposta questo elemento in Post-IT">📝 Sposta in Post-IT</button>
+        </div>
+        <div class="modal-footer-actions-right">
+          <button id="cancelEditItemBtn" type="button" class="btn btn-neutral">Annulla</button>
+          <button id="saveEditItemBtn" type="button" class="btn btn-primary">💾 Salva</button>
+        </div>
       </div>
     </div>
   </div>
@@ -398,9 +405,16 @@
           <div id="detailAttachmentsList" class="attach-chips"></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button id="cancelDiaryDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
-        <button id="saveDiaryDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+      <div class="modal-footer modal-footer-split">
+        <div class="modal-footer-actions-left">
+          <button id="detailShareBtn" type="button" class="btn btn-neutral btn-sm" title="Condividi nota diario">📤 Condividi</button>
+          <button id="moveDiaryToArchiveBtn" type="button" class="btn btn-soft-blue btn-sm" title="Sposta questa nota in Archivio">📁 Sposta in Archivio</button>
+          <button id="moveDiaryToNoteBtn" type="button" class="btn btn-soft-green btn-sm" title="Sposta questa nota in Post-IT">📝 Sposta in Post-IT</button>
+        </div>
+        <div class="modal-footer-actions-right">
+          <button id="cancelDiaryDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
+          <button id="saveDiaryDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+        </div>
       </div>
     </div>
   </div>
@@ -454,14 +468,6 @@
         <div class="parallel-results-grid">
           <section class="parallel-col">
             <div class="parallel-col-header">
-              <h4>📁 Archivio Documenti</h4>
-              <span id="popupArchiveBadge" class="count-pill">0</span>
-            </div>
-            <div id="popupArchiveList" class="parallel-col-list"></div>
-          </section>
-
-          <section class="parallel-col">
-            <div class="parallel-col-header">
               <h4>📓 Diario / Agenda</h4>
               <span id="popupDiaryBadge" class="count-pill">0</span>
             </div>
@@ -474,6 +480,14 @@
               <span id="popupNotesBadge" class="count-pill">0</span>
             </div>
             <div id="popupNotesList" class="parallel-col-list"></div>
+          </section>
+
+          <section class="parallel-col">
+            <div class="parallel-col-header">
+              <h4>📁 Archivio Documenti</h4>
+              <span id="popupArchiveBadge" class="count-pill">0</span>
+            </div>
+            <div id="popupArchiveList" class="parallel-col-list"></div>
           </section>
         </div>
       </div>
@@ -495,6 +509,8 @@
         <div class="preview-header-actions">
           <select id="previewCategorySelect" class="field-input category-select-compact hidden"
             title="Assegna categoria"></select>
+          <button id="previewShareBtn" type="button" class="btn btn-neutral btn-sm"
+            title="Condividi documento">📤 Condividi</button>
           <button id="previewOpenSystemBtn" type="button" class="btn btn-primary btn-sm"
             title="Apri con l'applicazione predefinita del sistema">🚀 Apri con app</button>
           <button id="previewSaveFileBtn" type="button" class="btn btn-neutral btn-sm"
@@ -518,7 +534,7 @@
         <div class="credits-brand">
           <img src="./icons/icon.svg" alt="MemoBam" class="credits-app-icon">
           <div>
-            <div class="credits-app-name">MemoBam <span class="version-label">v2.0.1</span></div>
+            <div class="credits-app-name">MemoBam <span class="version-label">v2.1.0</span></div>
             <div class="credits-author">Creato da <strong>Bruno Astemio</strong></div>
           </div>
         </div>
@@ -597,9 +613,16 @@
           <div id="noteDetailAttachmentsList" class="attach-chips"></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button id="cancelNoteDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
-        <button id="saveNoteDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+      <div class="modal-footer modal-footer-split">
+        <div class="modal-footer-actions-left">
+          <button id="noteDetailShareBtn" type="button" class="btn btn-neutral btn-sm" title="Condividi Post-IT">📤 Condividi</button>
+          <button id="moveNoteToArchiveBtn" type="button" class="btn btn-soft-blue btn-sm" title="Sposta questo Post-IT in Archivio">📁 Sposta in Archivio</button>
+          <button id="moveNoteToDiaryBtn" type="button" class="btn btn-soft-purple btn-sm" title="Sposta questo Post-IT nel Diario">📓 Sposta in Diario</button>
+        </div>
+        <div class="modal-footer-actions-right">
+          <button id="cancelNoteDetailBtn" type="button" class="btn btn-neutral">Chiudi</button>
+          <button id="saveNoteDetailBtn" type="button" class="btn btn-primary">💾 Salva modifiche</button>
+        </div>
       </div>
     </div>
   </div>
